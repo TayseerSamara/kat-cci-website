@@ -18,7 +18,7 @@
       regular: 200,                         // promo basis for this class
       price: 160,
       fineprint: '+ $150 state fee & $3.38 processing',
-      checkoutUrl: ''
+      checkoutUrl: 'https://buy.stripe.com/bJe28rcY86Z9cEYeJJak005'   // $160.00 (verified)
     },
     {
       id: 'womens-2026-10-24',
@@ -30,7 +30,7 @@
       regular: 125,
       price: 100,
       fineprint: '+ $3.38 processing',
-      checkoutUrl: ''
+      checkoutUrl: 'https://buy.stripe.com/4gM5kD6zK4R15cwbxxak006'   // $100.00 (verified)
     }
   ];
 
