@@ -45,10 +45,12 @@ const seed = {
     l2: { name: 'Robin Lee', phone: '630-555-0111', classType: 'Not sure yet', message: '', createdAt: ts(4) }
   },
   reviewRequests: FRESH ? {} : {
-    r1: { name: 'Jordan Rivera', phone: '312-555-0101', email: 'jordan.rivera@example.com', method: 'sms',
+    r1: { name: 'Jordan Rivera', phone: '312-555-0101', email: 'jordan.rivera@example.com',
+          phoneNormalized: '3125550101', emailNormalized: 'jordan.rivera@example.com', method: 'sms',
           message: 'Hi Jordan, thank you for training with KAT CCI! …', reviewUrl: 'https://g.page/r/DEMO-ONLY/review',
           requestedAt: ts(3), requestedBy: 'nora@katcci.com', studentId: 's1', linked: 'student', status: 'opened_sms' },
-    r2: { name: '', phone: '', email: 'former.student@example.com', method: 'email',
+    // r2 predates the normalized fields, to exercise the fallback.
+    r2: { name: '', phone: '', email: 'Former.Student@example.com ', method: 'email',
           message: 'Hi there, thank you for training with KAT CCI! …', reviewUrl: 'https://g.page/r/DEMO-ONLY/review',
           requestedAt: ts(40), requestedBy: 'tony@midwayspeedpark.com', studentId: null, linked: 'manual', status: 'opened_email' }
   },
@@ -63,6 +65,7 @@ const seed = {
 
 const db = {};
 for (const [name, docs] of Object.entries(seed)) db[name] = new Map(Object.entries(docs));
+window.__demoDb = db;   // lets automated tests inspect what would have been saved
 
 // ── Refs & queries ──
 const clone = obj => ({ ...obj });

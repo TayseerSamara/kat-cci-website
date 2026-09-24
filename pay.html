@@ -1923,12 +1923,17 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
     function rrShow(t, kind) { rrMsg.textContent = t || ''; rrMsg.className = 'mgr-msg' + (kind ? ' ' + kind : ''); }
     function rsShow(t, kind) { rsMsg.textContent = t || ''; rsMsg.className = 'mgr-msg' + (kind ? ' ' + kind : ''); }
 
+    // Records store phoneNormalized / emailNormalized; fall back to the raw
+    // fields for any record saved without them.
+    function recordPhone(r) { return r.phoneNormalized != null ? r.phoneNormalized : normPhone(r.phone); }
+    function recordEmail(r) { return r.emailNormalized != null ? r.emailNormalized : normEmail(r.email); }
+
     // Earlier requests to the same phone number or email, newest first.
     function previousRequests(phone, email) {
       const p = normPhone(phone), m = normEmail(email);
       if (p.length < 7 && !m) return [];
       return reviewRequests.filter(r =>
-        (p.length >= 7 && normPhone(r.phone) === p) || (m && normEmail(r.email) === m));
+        (p.length >= 7 && recordPhone(r) === p) || (m && recordEmail(r) === m));
     }
     function findStudentMatch(phone, email) {
       const p = normPhone(phone), m = normEmail(email);
@@ -2119,6 +2124,8 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
         name: p.name,
         phone: p.phone,
         email: p.email,
+        phoneNormalized: normPhone(p.phone),
+        emailNormalized: normEmail(p.email),
         method: p.method,
         message: message,
         reviewUrl: p.url,
@@ -2222,7 +2229,7 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
       const list = !q ? reviewRequests : reviewRequests.filter(r =>
         (r.name || '').toLowerCase().includes(q) ||
         (r.email || '').toLowerCase().includes(q) ||
-        (qDigits.length >= 3 && normPhone(r.phone).includes(qDigits)));
+        (qDigits.length >= 3 && recordPhone(r).includes(qDigits)));
       rhList.innerHTML = list.length
         ? list.map(reviewRow).join('')
         : '<p class="mgr-hint">No requests match "' + esc(rhSearch.value.trim()) + '".</p>';
