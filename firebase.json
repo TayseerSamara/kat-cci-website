@@ -1,0 +1,12 @@
+{
+  "hosting": {
+    "site": "katcci",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}
