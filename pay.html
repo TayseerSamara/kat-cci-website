@@ -1289,6 +1289,11 @@
 
         const bringLines = cfg.bring.map(item => `   • ${item}`).join('\n');
 
+        // Payment reminder for every confirmation except CCL Day 2 (range day).
+        const paymentBit = cardState.classType === 'ccl_day2'
+          ? ''
+          : '\n💵 Payment: Zelle, Apple Pay, or Cash\n';
+
         return `${cfg.heading}
 
 🕐 Arrive: ${time}
@@ -1296,9 +1301,7 @@
 
 🧾 Bring:
 ${bringLines}
-
-💵 Payment: Zelle, Apple Pay, or Cash
-
+${paymentBit}
 ${cfg.footer}
 
 Reply with any questions before class day — see you soon!
