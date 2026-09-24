@@ -5,6 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Illinois Concealed Carry License | Get Your CCL Today</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#b06a75">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -107,12 +111,43 @@
     }
 
     .phone-link {
-      color: var(--navy);
-      font-weight: 600;
-      font-size: .9rem;
-      display: flex;
+      display: inline-flex;
+      align-items: stretch;
+      border-radius: 999px;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(34,34,34,.18);
+      border: 1px solid rgba(255,255,255,.15);
+    }
+
+    .phone-link a {
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      padding: 10px 18px;
+      font-weight: 700;
+      font-size: .92rem;
+      letter-spacing: .2px;
+      color: #fff;
+      text-decoration: none;
+      transition: filter .2s, transform .15s;
+    }
+
+    .phone-link a:hover { filter: brightness(1.08); }
+    .phone-link a:active { transform: translateY(1px); }
+
+    .phone-link .call-btn {
+      background: linear-gradient(135deg, var(--navy), var(--navy-900));
+    }
+
+    .phone-link .text-btn {
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      border-left: 1px solid rgba(255,255,255,.25);
+    }
+
+    .phone-link svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
     }
 
     .hamburger {
@@ -462,9 +497,12 @@
 
     /* ───────── HOW IT WORKS ───────── */
     .how {
-      background: var(--white);
+      background: var(--navy-900);
       padding: 80px 24px;
     }
+
+    .how .section-header h2 { color: var(--white); }
+    .how .section-header p { color: rgba(255,255,255,.65); }
 
     .steps {
       max-width: 900px;
@@ -510,12 +548,12 @@
     .step h3 {
       font-size: 1.1rem;
       font-weight: 700;
-      color: var(--navy);
+      color: var(--white);
       margin-bottom: 10px;
     }
 
     .step p {
-      color: var(--text-light);
+      color: rgba(255,255,255,.7);
       font-size: .9rem;
       line-height: 1.65;
     }
@@ -666,6 +704,307 @@
       padding: 18px;
     }
 
+    /* ───────── PAYMENT METHODS STRIP ───────── */
+    .payment-methods {
+      max-width: 1100px;
+      margin: 18px auto 0;
+      padding: 18px 24px;
+      background: var(--white);
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 14px 22px;
+      text-align: center;
+    }
+
+    .pm-label {
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--navy);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+    }
+
+    .pm-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .pm-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--gray-bg);
+      padding: 6px 12px;
+      border-radius: 100px;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .pm-note {
+      flex-basis: 100%;
+      font-size: .85rem;
+      color: var(--text-light);
+      margin-top: 4px;
+    }
+
+    .pm-note strong { color: var(--navy); }
+
+    /* ───────── FEES NOTE ───────── */
+    .fees-note {
+      max-width: 1100px;
+      margin: 28px auto 0;
+      padding: 18px 24px;
+      background: rgba(34,34,34,.04);
+      border: 1px solid rgba(34,34,34,.08);
+      border-left: 4px solid var(--gold);
+      border-radius: 10px;
+      font-size: .9rem;
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    .fees-note strong {
+      color: var(--navy);
+      display: block;
+      margin-bottom: 4px;
+      font-size: .92rem;
+    }
+
+    /* ───────── UPCOMING CLASSES ───────── */
+    .upcoming {
+      background: var(--white);
+      padding: 80px 24px;
+    }
+
+    .upcoming-grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+
+    .uc-card {
+      background: var(--white);
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 22px 22px 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.05);
+      display: flex;
+      flex-direction: column;
+      transition: transform .2s, box-shadow .2s, border-color .2s;
+    }
+
+    .uc-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 32px rgba(0,0,0,.1);
+      border-color: var(--gold);
+    }
+
+    .uc-tag {
+      display: inline-block;
+      align-self: flex-start;
+      background: rgba(176,106,117,.12);
+      color: var(--gold);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 100px;
+      margin-bottom: 14px;
+    }
+
+    .uc-date {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1.3;
+      margin-bottom: 6px;
+    }
+
+    .uc-date small {
+      display: block;
+      font-size: .82rem;
+      font-weight: 500;
+      color: var(--text-light);
+      margin-top: 4px;
+    }
+
+    .uc-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 10px 0 4px;
+    }
+
+    .uc-duration {
+      font-size: .85rem;
+      color: var(--text-light);
+      margin-bottom: 14px;
+    }
+
+    .uc-price {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--gold);
+      margin-bottom: 4px;
+      line-height: 1;
+    }
+
+    .uc-fineprint {
+      font-size: .75rem;
+      color: var(--text-light);
+      margin-bottom: 18px;
+    }
+
+    .uc-card .btn-sms {
+      margin-top: auto;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      color: var(--white);
+      font-weight: 800;
+      font-size: .92rem;
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform .15s, box-shadow .15s;
+      font-family: inherit;
+    }
+
+    .uc-card .btn-sms:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(176,106,117,.4);
+    }
+
+    .uc-card.is-paired { border-left: 4px solid var(--gold); }
+
+    .uc-features {
+      margin-bottom: 18px;
+      border-top: 1px solid #eef0f2;
+      padding-top: 14px;
+    }
+    .uc-features-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      text-align: left;
+    }
+    .uc-features-toggle::after {
+      content: '▾';
+      margin-left: auto;
+      transition: transform .2s;
+    }
+    .uc-features.open .uc-features-toggle::after { transform: rotate(180deg); }
+    .uc-features-body {
+      list-style: none;
+      margin: 0;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .uc-features.open .uc-features-body {
+      display: flex;
+      margin-top: 14px;
+    }
+    .uc-features-body li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: .85rem;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .uc-check {
+      width: 18px;
+      height: 18px;
+      background: #22c55e;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .uc-check svg { width: 11px; height: 11px; }
+
+    .upcoming-footer {
+      max-width: 1100px;
+      margin: 32px auto 0;
+      text-align: center;
+      color: var(--text-light);
+      font-size: .92rem;
+    }
+
+    .upcoming-footer a {
+      color: var(--gold);
+      font-weight: 700;
+      text-decoration: underline;
+    }
+
+    .uc-loading {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: var(--text-light);
+      font-size: .95rem;
+      padding: 24px 12px;
+    }
+
+    .uc-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 30px 24px;
+      background: rgba(176,106,117,.06);
+      border: 1px dashed var(--gold);
+      border-radius: 14px;
+    }
+
+    .uc-empty p {
+      color: var(--text);
+      font-size: .98rem;
+      margin-bottom: 16px;
+    }
+
+    .uc-empty .btn-sms {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      color: var(--white);
+      font-weight: 800;
+      font-size: .92rem;
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+    }
+
+    .uc-empty .btn-sms:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(176,106,117,.4);
+    }
+
     /* ───────── FAQ / QUESTIONS ───────── */
     .faq-cta {
       background: var(--white);
@@ -689,6 +1028,67 @@
       color: var(--text-light);
       margin-bottom: 36px;
       font-size: 1.05rem;
+    }
+
+    .lead-form {
+      max-width: 520px;
+      margin: 0 auto 28px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .lead-row {
+      display: flex;
+      gap: 12px;
+    }
+    .lead-row input { flex: 1; min-width: 0; }
+    .lead-form input,
+    .lead-form select,
+    .lead-form textarea {
+      width: 100%;
+      font-family: inherit;
+      font-size: 1rem;
+      color: var(--navy);
+      background: var(--white);
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 13px 15px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .lead-form input:focus,
+    .lead-form select:focus,
+    .lead-form textarea:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(176,106,117,.18);
+    }
+    .lead-form textarea { resize: vertical; }
+    .lead-form select:invalid { color: var(--text-light); }
+    .lead-form .btn-gold {
+      margin-top: 4px;
+      font-size: 1rem;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .lead-form .btn-gold:disabled { opacity: .6; cursor: default; }
+    .lead-status {
+      margin: 0 !important;
+      font-size: .92rem;
+      text-align: center;
+      min-height: 1.2em;
+    }
+    .lead-status.success { color: #16a34a; font-weight: 600; }
+    .lead-status.error { color: var(--red); font-weight: 600; }
+    .lead-or {
+      font-size: .92rem !important;
+      color: var(--text-light);
+      margin-bottom: 14px !important;
+    }
+    @media (max-width: 480px) {
+      .lead-row { flex-direction: column; }
     }
 
     .faq-btns {
@@ -1023,6 +1423,47 @@
     }
 
     .modal-close:hover { background: rgba(255,255,255,.25); }
+
+    .modal-body { padding: 24px 28px 28px; }
+    .modal-body .lead-form { margin-bottom: 0; }
+
+    .rc-option {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      text-align: left;
+      background: var(--white);
+      border: 1.5px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 18px 20px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color .15s, box-shadow .15s, transform .12s;
+    }
+    .rc-option + .rc-option { margin-top: 14px; }
+    .rc-option:hover {
+      border-color: var(--gold);
+      box-shadow: 0 6px 20px rgba(176,106,117,.18);
+      transform: translateY(-1px);
+    }
+    .rc-emoji { font-size: 1.7rem; flex-shrink: 0; }
+    .rc-text { display: flex; flex-direction: column; flex: 1; }
+    .rc-text strong { font-size: 1.02rem; color: var(--navy); font-weight: 800; }
+    .rc-text small { font-size: .82rem; color: var(--text-light); margin-top: 2px; }
+    .rc-arrow { font-size: 1.5rem; color: var(--gold); flex-shrink: 0; }
+
+    .rc-back {
+      margin-top: 14px;
+      background: none;
+      border: none;
+      color: var(--text-light);
+      font-family: inherit;
+      font-size: .9rem;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .rc-back:hover { color: var(--navy); }
 
     .cal-nav {
       display: flex;
@@ -1447,13 +1888,114 @@
 header {
   line-height: 0;
 }
+
+#inAppBar {
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: #fff;
+  font-size: .92rem;
+  line-height: 1.4;
+  box-shadow: 0 2px 10px rgba(0,0,0,.2);
+}
+
+#inAppBar strong { font-weight: 700; white-space: nowrap; }
+
+#inAppBar button {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: rgba(255,255,255,.25);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
   </style>
 
-  <!-- Calendly popup widget -->
-  <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
-  <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
+  <!-- SMS-first reservation helpers -->
+  <script>
+    const KAT_PHONE = '3127999965';
+    function smsReserve(message) {
+      const body = message || "Hi Kat CCI, please sign me up for an upcoming class. What dates are available?";
+      // Fire sms: directly from the tap — in-app browsers (Facebook/Instagram) only honor
+      // sms: when it's triggered by a direct user gesture, not a timer or popup.
+      // iOS uses '&' as the body separator; Android uses '?'.
+      const sep = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent) ? '&' : '?';
+      window.location.href = 'sms:' + KAT_PHONE + sep + 'body=' + encodeURIComponent(body);
+    }
+    function scrollToUpcoming() {
+      const el = document.getElementById('upcoming');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Reserve popup: lets the customer choose Text vs. Form ──
+    let reserveMsg = '';
+    function openReserve(message, classType) {
+      reserveMsg = message || '';
+      const overlay = document.getElementById('reserveModal');
+      if (!overlay) { smsReserve(message); return; } // fallback if modal missing
+      reserveShowChoice();
+      if (classType) {
+        const sel = document.getElementById('leadClass');
+        if (sel) {
+          for (let i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === classType || sel.options[i].text === classType) { sel.selectedIndex = i; break; }
+          }
+        }
+      }
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function reserveShowChoice() {
+      document.getElementById('reserveChoice').style.display = '';
+      document.getElementById('reserveFormStep').style.display = 'none';
+      document.getElementById('reserveSub').textContent = "Choose how you'd like to reach us";
+    }
+    function reserveShowForm() {
+      document.getElementById('reserveChoice').style.display = 'none';
+      document.getElementById('reserveFormStep').style.display = '';
+      document.getElementById('reserveSub').textContent = "We'll text or call you back to confirm";
+      const n = document.getElementById('leadName');
+      if (n) setTimeout(() => n.focus(), 50);
+    }
+    function reservePickText() {
+      // Fire sms: synchronously from this tap so in-app browsers honor it.
+      smsReserve(reserveMsg);
+      closeReserve();
+    }
+    function closeReserve() {
+      const overlay = document.getElementById('reserveModal');
+      if (overlay) overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReserve(); });
+  </script>
 </head>
 <body>
+
+  <!-- In-app browser notice: Instagram/Facebook webviews block tel:/sms: links -->
+  <script>
+    (function () {
+      var ua = navigator.userAgent || '';
+      var inApp = /Instagram|FBAN|FBAV|FB_IAB|Messenger|Snapchat|Line\/|MicroMessenger|TikTok/i.test(ua);
+      if (!inApp) return;
+      var bar = document.createElement('div');
+      bar.id = 'inAppBar';
+      bar.innerHTML =
+        '<span>📱 To call or text us, tap the <strong>•••</strong> menu above and choose <strong>“Open in browser”</strong>.</span>' +
+        '<button aria-label="Dismiss" onclick="document.getElementById(\'inAppBar\').remove()">&times;</button>';
+      document.body.insertBefore(bar, document.body.firstChild);
+    })();
+  </script>
 
   <!-- ═══════════════ HEADER ═══════════════ -->
   <header>
@@ -1469,12 +2011,23 @@ header {
         <a href="#how">About</a>
         <a href="#faq">FAQ</a>
         <a href="#contact">Contact</a>
-        <a href="#pricing" class="nav-cta">Train With Us</a>
+        <a href="#upcoming" class="nav-cta" onclick="scrollToUpcoming(); return false;">📅 Upcoming Classes</a>
       </nav>
 
-      <a href="tel:" class="phone-link">
-        📞 (312) 799-9965
-      </a>
+      <div class="phone-link">
+        <a href="tel:3127999965" class="call-btn" aria-label="Call (312) 799-9965">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.24 1.01l-2.21 2.2z"/>
+          </svg>
+          (312) 799-9965
+        </a>
+        <a href="sms:3127999965" class="text-btn" aria-label="Text (312) 799-9965">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M20 2H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4l4 4 4-4h4a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM7 9h10v2H7V9zm0 4h7v2H7v-2z"/>
+          </svg>
+          Text
+        </a>
+      </div>
 
       <div class="hamburger" onclick="toggleMenu()">
         <span></span><span></span><span></span>
@@ -1487,8 +2040,9 @@ header {
       <a href="#how">About</a>
       <a href="#faq">FAQ</a>
       <a href="#contact">Contact</a>
-      <a href="tel:3127999965">📞 (312) 799-9965</a>
-      <a href="#pricing" style="color:var(--gold);font-weight:700;">Book Your Seat</a>
+      <a href="tel:3127999965">📞 Call (312) 799-9965</a>
+      <a href="sms:3127999965">💬 Text (312) 799-9965</a>
+      <a href="#upcoming" onclick="scrollToUpcoming(); return false;" style="color:var(--gold);font-weight:700;">📅 Upcoming Classes</a>
     </div>
   </header>
 
@@ -1520,8 +2074,7 @@ header {
         instructors. Classroom instruction + live-fire range included.
       </p>
       <div class="hero-btns">
-        <!-- <a href="#" class="btn-gold" onclick="openCalendly(); return false;">🗓️ Book Your Seat Now</a> -->
-        <button class="btn-outline" onclick="openCalendly()">📅 View Available Times</button>
+        <button class="btn-gold" onclick="scrollToUpcoming()">📅 View &amp; Book Upcoming Classes</button>
       </div>
       <div class="hero-badges">
         <div class="hero-badge-item">
@@ -1546,31 +2099,6 @@ header {
     </div>
   </section>
 
-  <!-- ═══════════════ STATS ═══════════════ -->
-  <section class="stats">
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon">🎓</div>
-        <div class="stat-num">2,500+</div>
-        <div class="stat-label">Students Trained</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">⭐</div>
-        <div class="stat-num">4.9/5</div>
-        <div class="stat-label">Average Rating</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">✅</div>
-        <div class="stat-num">98%</div>
-        <div class="stat-label">Pass Rate</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">🏆</div>
-        <div class="stat-num">10+</div>
-        <div class="stat-label">Years Experience</div>
-      </div>
-    </div>
-  </section>
 
   <!-- ═══════════════ FEATURES ═══════════════ -->
   <section class="features" id="features">
@@ -1639,128 +2167,76 @@ header {
     </div>
   </section>
 
-  <!-- ═══════════════ TESTIMONIALS ═══════════════ -->
-  <section class="testimonials">
-    <div class="section-header">
-      <span class="section-eyebrow">Student Reviews</span>
-      <h2>What Our Students Say</h2>
-      <p>Over 2,500 Illinois residents have earned their CCL through our program.</p>
-    </div>
-    <div class="testi-grid">
-      <div class="testi-card">
-        <div class="stars">★★★★★</div>
-        <p class="testi-quote">"Best firearms training experience I've had. The instructors were professional, patient, and really cared about making sure we were prepared. Got my CCL in 6 weeks after the class!"</p>
-        <div class="testi-name">Marcus T.</div>
-        <div class="testi-location">Chicago, IL</div>
-      </div>
-      <div class="testi-card">
-        <div class="stars">★★★★★</div>
-        <p class="testi-quote">"As a first-time gun owner, I was nervous about the class. The team made me feel comfortable from day one. The range instruction was fantastic and I felt fully prepared."</p>
-        <div class="testi-name">Jennifer R.</div>
-        <div class="testi-location">Naperville, IL</div>
-      </div>
-      <div class="testi-card">
-        <div class="stars">★★★★★</div>
-        <p class="testi-quote">"I've taken other CCL courses and this one blows them all out of the water. Small class size means you get real, hands-on attention. Worth every penny. Highly recommend."</p>
-        <div class="testi-name">David K.</div>
-        <div class="testi-location">Rockford, IL</div>
-      </div>
-    </div>
-  </section>
 
   <!-- ═══════════════ PRICING ═══════════════ -->
-  <section class="pricing" id="pricing">
+  <!-- ═══════════════ UPCOMING CLASSES ═══════════════ -->
+  <!--
+    This schedule loads live from Firestore. Add/edit/remove classes from the
+    staff dashboard at /pay → "Manage Public Schedule" (bottom of that page).
+    Changes appear here within ~1 second — no code edits needed.
+    The Private card is permanent (by-appointment, not date-scheduled).
+  -->
+  <section class="upcoming" id="upcoming">
     <div class="section-header">
-      <span class="section-eyebrow">Enrollment</span>
-      <h2>Course Pricing</h2>
-      <p>Transparent, all-inclusive pricing. No hidden fees.</p>
+      <span class="section-eyebrow">Schedule</span>
+      <h2>Upcoming Classes</h2>
+      <p>Reserve your spot by text — we'll confirm availability and send a payment link.</p>
     </div>
-    <div class="price-grid">
 
-      <!-- LEFT: 16-Hour New CCL -->
-      <div class="price-card featured">
-        <div class="price-header">
-          <h3>Illinois 16-Hour Concealed Carry Course</h3>
-          <div class="price-amount">
-            <span style="font-size:1.8rem;font-weight:700;color:rgba(255,255,255,.4);text-decoration:line-through;margin-right:10px;">$250</span>$150<span style="font-size:1.5rem">.00</span>
-          </div>
-          <div class="price-note">$50 deposit to reserve your seat</div>
+    <div class="upcoming-grid" id="upcomingGrid">
+      <p class="uc-loading" id="ucLoading">Loading upcoming classes…</p>
+
+      <!-- Private 1-on-1 — always available, not date-scheduled -->
+      <div class="uc-card" id="ucPrivate">
+        <span class="uc-tag">Private</span>
+        <div class="uc-date">
+          By appointment
+          <small>Schedule that fits you</small>
         </div>
-        <div class="price-body">
-          <ul class="price-list">
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              8 hours of classroom instruction
-            </li>
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              8 hours of live-fire range training
-            </li>
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              State-required certificate of completion
-            </li>
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              ISP application walkthrough &amp; assistance
-            </li>
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              Ammunition provided for qualification
-            </li>
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              Course materials &amp; study guide
-            </li>
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              Post-class support &amp; questions answered
-            </li>
+        <div class="uc-title">Private 1-on-1 Class</div>
+        <div class="uc-duration">Personalized training, your pace</div>
+        <div class="uc-price">From $250</div>
+        <div class="uc-fineprint">+ applicable state &amp; processing fees</div>
+        <div class="uc-features">
+          <button type="button" class="uc-features-toggle">What's included</button>
+          <ul class="uc-features-body">
+            <li><span class="uc-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>Group classes available for friends, families, or private parties</li>
+            <li><span class="uc-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>Illinois 16-hour Concealed Carry License (CCL) course</li>
+            <li><span class="uc-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>3-hour Renewal Concealed Carry Course</li>
+            <li><span class="uc-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>Women-only classes offered in a comfortable, supportive environment</li>
+            <li><span class="uc-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>Beginner-friendly classes with no experience required</li>
           </ul>
-          <a href="#" class="btn-gold" onclick="openCalendly(); return false;">🗓️ Book Your Seat Now</a>
         </div>
+        <button class="btn-sms" onclick="openReserve('Hi Kat CCI, please sign me up for a private class. What dates and times are available?', 'Private / Group Class')">
+          💬 Reserve / Inquire
+        </button>
       </div>
+    </div>
 
-      <!-- RIGHT: 3-Hour Renewal -->
-      <div class="price-card">
-        <div class="price-header">
-          <h3>Illinois 3-Hour Renewal Concealed Carry Course</h3>
-          <div class="price-amount">
-            <span style="font-size:1.8rem;font-weight:700;color:rgba(255,255,255,.4);text-decoration:line-through;margin-right:10px;">$145</span>$115<span style="font-size:1.5rem">.00</span>
-          </div>
-          <div class="price-note">$50 deposit to reserve your seat</div>
-        </div>
-        <div class="price-body">
-          <ul class="price-list">
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              3 hours of state-required renewal instruction
-            </li>
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              State-required renewal certificate of completion
-            </li>
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              ISP license renewal walkthrough &amp; assistance
-            </li>
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              Updated Illinois CCL law &amp; legal use of force review
-            </li>
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              Course materials included
-            </li>
-            <li>
-              <div class="green-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
-              Post-class support &amp; questions answered
-            </li>
-          </ul>
-          <a href="#" class="btn-gold" onclick="openCalendly(); return false;">🗓️ Book Your Seat Now</a>
-        </div>
+    <p class="upcoming-footer">
+      Don't see a date that works? <a href="#" onclick="openReserve(); return false;">Reserve / message us</a> and we'll let you know what's coming up next.
+    </p>
+
+    <!-- Payment methods -->
+    <div class="payment-methods">
+      <span class="pm-label">We accept</span>
+      <div class="pm-list">
+        <span class="pm-item">💳 Visa</span>
+        <span class="pm-item">💳 Mastercard</span>
+        <span class="pm-item">💳 Amex</span>
+        <span class="pm-item">💳 Discover</span>
+        <span class="pm-item">🍎 Apple Pay</span>
+        <span class="pm-item">🅖 Google Pay</span>
+        <span class="pm-item">📱 Zelle</span>
+        <span class="pm-item">💵 Cash</span>
       </div>
+      <p class="pm-note"><strong>All payments must be paid in full to confirm your seat.</strong> Text us to reserve — we'll send a secure payment link.</p>
+    </div>
 
+    <!-- Additional fees disclosure -->
+    <div class="fees-note">
+      <strong>Heads up — not included in 16 hour or 3 hour CCL course price:</strong>
+      <span>$150 Illinois state fee · $3.38 processing fee · Range fees ($23) and lane waiver ($6) where applicable · Firearm rental with ammo $25 · Eye &amp; ear protection included.</span>
     </div>
   </section>
 
@@ -1819,9 +2295,20 @@ header {
           <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="faq-a">
-          <strong>Cancellation Policy</strong>
-          Deposits are strictly non-refundable. One-time transfer allowed within 60 days. No-shows forfeit all payments.
+          <strong>Cancellation Policy</strong><br>
+          Full payment is required to confirm your seat. Payments are non-refundable but may be transferred <strong>once</strong> to a future class within 60 days, subject to availability. No-shows forfeit all payments.
           By registering, you agree to these terms. Seats are limited and reserved exclusively for you.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How do I pay, and what methods do you accept?
+          <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-a">
+          Text us at <a href="sms:3127999965" style="color:var(--gold);font-weight:600;text-decoration:underline;">(312) 799-9965</a> to reserve. We'll confirm a seat and send a secure payment link.<br><br>
+          We accept all major credit cards (Visa, Mastercard, Amex, Discover), Apple Pay, Google Pay, Zelle, and cash. <strong>Payment in full is required to confirm your seat</strong> — no holds, no partial deposits.
+        </div>
       </div>
 
     </div>
@@ -1830,11 +2317,15 @@ header {
   <!-- ═══════════════ CONTACT CTA ═══════════════ -->
   <section class="faq-cta" id="contact">
     <div class="faq-inner">
-      <h2>Have Questions?</h2>
-      <p>Our team is happy to help. Reach out by phone or message and we'll get back to you quickly.</p>
+      <h2>Have Questions? Reserve Your Spot</h2>
+      <p>Reserve by text or leave your info and we'll get back to you to confirm a seat and answer any questions.</p>
+
+      <button type="button" class="btn-gold lead-open-btn" onclick="openReserve()">📅 Reserve Your Spot / Ask a Question</button>
+
+      <p class="lead-or">Prefer to reach us directly?</p>
       <div class="faq-btns">
         <a href="tel:3127999965" class="btn-navy">📞 Call (312) 799-9965</a>
-        <a href="mailto:nora@katcci.com" class="btn-outline-navy">✉️ Send a Message</a>
+        <a href="sms:3127999965" class="btn-outline-navy">💬 Text Us</a>
       </div>
     </div>
   </section>
@@ -1844,13 +2335,16 @@ header {
     <div class="footer-cta-banner">
       <h2>Ready to Get Your Illinois CCL?</h2>
       <p>Seats fill fast. Reserve your spot today and start your journey to legal carry.</p>
-      <a href="#pricing" class="btn-navy">🗓️ Book Your Seat Now</a>
+      <a href="#upcoming" class="btn-navy" onclick="scrollToUpcoming(); return false;">📅 See Upcoming Classes</a>
     </div>
 
     <div style="text-align:center;padding:32px 20px 8px;">
       <img src="kat-cci-logo.png" alt="KAT CCI Logo" style="width:100px;height:auto;margin-bottom:16px;" />
-      <p style="color:rgba(255,255,255,.9);font-size:1rem;margin-bottom:12px;">
+      <p style="color:rgba(255,255,255,.9);font-size:1rem;margin-bottom:8px;">
         KAT CCI — Illinois Concealed Carry License Training
+      </p>
+      <p style="color:rgba(255,255,255,.75);font-size:0.95rem;margin-bottom:12px;">
+        📍 <a href="https://maps.google.com/?q=4604+W+137th+Street+Unit+D+Crestwood+IL+60445" target="_blank" rel="noopener" style="color:rgba(255,255,255,.85);text-decoration:underline;">4604 W 137th Street, Unit D, Crestwood, IL 60445</a>
       </p>
       <p style="color:rgba(255,255,255,.6);font-size:0.9rem;margin-bottom:4px;">
         📸 <a href="https://www.instagram.com/katcci_" target="_blank" rel="noopener" style="color:rgba(255,255,255,.6);">@katcci_</a>
@@ -1859,7 +2353,8 @@ header {
       </p>
     </div>
     <div style="border-top:1px solid rgba(255,255,255,.08);text-align:center;padding:16px 20px 90px;">
-      <p style="color:rgba(255,255,255,.4);font-size:0.8rem;margin:0;">© 2025 KAT CCI. All rights reserved.</p>
+      <p style="color:rgba(255,255,255,.4);font-size:0.8rem;margin:0 0 6px;">© 2026 KAT CCI. All rights reserved.</p>
+      <p style="font-size:0.8rem;margin:0;"><a href="/terms" style="color:rgba(255,255,255,.55);text-decoration:underline;">Terms &amp; Conditions</a></p>
     </div>
   </footer>
 
@@ -1921,14 +2416,297 @@ header {
   </script>
 
   <!-- Floating sticky CTA -->
-  <a href="#" class="float-btn" id="floatBtn" onclick="openCalendly(); return false;">
-    🗓️ Book Now
+  <a href="#" class="float-btn" id="floatBtn" onclick="openReserve(); return false;">
+    💬 Reserve Your Spot
   </a>
 
+  <!-- ═══════════════ RESERVE MODAL (choice → text or form) ═══════════════ -->
+  <div class="modal-overlay" id="reserveModal" onclick="if(event.target===this)closeReserve()">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h3>Reserve Your Spot</h3>
+          <p id="reserveSub">Choose how you'd like to reach us</p>
+        </div>
+        <button class="modal-close" onclick="closeReserve()" aria-label="Close">&times;</button>
+      </div>
 
-  <script>
-    function openCalendly() {
-      Calendly.initPopupWidget({ url: 'https://calendly.com/nora-katcci/30min' });
+      <!-- Step 1: choice -->
+      <div class="modal-body" id="reserveChoice">
+        <button type="button" class="rc-option" onclick="reservePickText()">
+          <span class="rc-emoji">💬</span>
+          <span class="rc-text"><strong>Text Us</strong><small>Fastest — opens your messaging app</small></span>
+          <span class="rc-arrow">›</span>
+        </button>
+        <button type="button" class="rc-option" onclick="reserveShowForm()">
+          <span class="rc-emoji">📝</span>
+          <span class="rc-text"><strong>Fill Out a Quick Form</strong><small>We'll text or call you back</small></span>
+          <span class="rc-arrow">›</span>
+        </button>
+      </div>
+
+      <!-- Step 2: form -->
+      <div class="modal-body" id="reserveFormStep" style="display:none;">
+        <form class="lead-form" id="leadForm">
+          <div class="lead-row">
+            <input type="text" name="name" id="leadName" placeholder="Your name" autocomplete="name" required maxlength="100">
+            <input type="tel" name="phone" id="leadPhone" placeholder="Phone number" autocomplete="tel" required maxlength="40">
+          </div>
+          <select name="classType" id="leadClass" required>
+            <option value="" disabled selected>Which class are you interested in?</option>
+            <option>16-Hour CCL Course</option>
+            <option>3-Hour Renewal</option>
+            <option>Women's Class</option>
+            <option>Private / Group Class</option>
+            <option>Not sure yet</option>
+          </select>
+          <textarea name="message" id="leadMessage" placeholder="Anything else? (optional) — preferred dates, questions, etc." maxlength="1000" rows="3"></textarea>
+          <button type="submit" class="btn-gold" id="leadSubmit">Send &amp; Reserve</button>
+          <p class="lead-status" id="leadStatus" role="status"></p>
+        </form>
+        <button type="button" class="rc-back" onclick="reserveShowChoice()">‹ Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ LIVE CLASS SCHEDULE (Firestore) ═══════════════ -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp }
+      from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCSZwkehqzmMChhaW93uPScZ3GCIjqnO2E",
+      authDomain: "katcci.firebaseapp.com",
+      projectId: "katcci",
+      storageBucket: "katcci.firebasestorage.app",
+      messagingSenderId: "577151213709",
+      appId: "1:577151213709:web:b4d2958901e766fea842c4"
+    };
+
+    // Paste your Formspree form endpoint here to also get an email on each lead.
+    // e.g. 'https://formspree.io/f/abcdwxyz'. Leave '' to save to Firestore only.
+    const LEAD_EMAIL_ENDPOINT = 'https://formspree.io/f/xeednnpl';
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Class type definitions — shared shape with the staff dashboard.
+    const TYPES = {
+      ccl: {
+        tag: 'CCL Certification',
+        title: 'Illinois 16-Hour CCL Course',
+        duration: 'Classroom + live-fire range',
+        dayLabel: 'Day 1 + Day 2 · 16 hours total',
+        fineprint: '+ $150 state fee &amp; $3.38 processing',
+        smsLabel: 'the 16-Hour CCL course',
+        formLabel: '16-Hour CCL Course',
+        paired: true,
+        features: [
+          '8 hours of classroom instruction',
+          '8 hours of live-fire range training',
+          'State-required certificate of completion',
+          'ISP application walkthrough & assistance',
+          'Course materials & study guide',
+          'Post-class support & questions answered'
+        ]
+      },
+      renewal: {
+        tag: 'Renewal',
+        title: 'Illinois CCL 3-Hour Renewal',
+        duration: 'For current CCL holders renewing their license',
+        dayLabel: '3 hours',
+        fineprint: '+ $150 state fee &amp; $3.38 processing',
+        smsLabel: 'the 3-Hour Renewal',
+        formLabel: '3-Hour Renewal',
+        paired: false,
+        features: [
+          '3 hours of state-required renewal instruction',
+          'State-required renewal certificate of completion',
+          'ISP license renewal walkthrough & assistance',
+          'Updated Illinois CCL law & legal use of force review',
+          'Course materials included',
+          'Post-class support & questions answered'
+        ]
+      },
+      womens: {
+        tag: "Women's Class",
+        title: "Women's Firearm Training",
+        duration: 'Women-only learning environment',
+        dayLabel: '4 hours',
+        fineprint: '+ $3.38 processing',
+        smsLabel: "the Women's Class",
+        formLabel: "Women's Class",
+        paired: false,
+        features: [
+          'Women-only beginner firearm safety course',
+          'No experience needed',
+          'Hands-on firearm handling practice',
+          'Situational awareness and defensive mindset',
+          'Live-fire instruction with guidance',
+          'Perfect for first-time firearm owners and beginners',
+          'Build confidence, safety knowledge, and responsible firearm handling skills'
+        ]
+      }
+    };
+
+    const grid = document.getElementById('upcomingGrid');
+    const privateCard = document.getElementById('ucPrivate');
+
+    function todayISO() {
+      const d = new Date();
+      return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+    }
+
+    function parseDate(iso) {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function fmtShort(iso) {
+      return parseDate(iso).toLocaleDateString('en-US',
+        { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    function fmtLong(iso) {
+      return parseDate(iso).toLocaleDateString('en-US',
+        { month: 'long', day: 'numeric' });
+    }
+
+    function fmtTime(t) {
+      if (!t) return '';
+      const [h, m] = t.split(':').map(Number);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      return (h % 12 || 12) + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"]/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    }
+
+    function cardHTML(c) {
+      const t = TYPES[c.type];
+      if (!t) return '';
+      const paired = t.paired && c.date2;
+      const dateStr = paired
+        ? fmtShort(c.date1) + ' &amp; ' + fmtShort(c.date2)
+        : fmtShort(c.date1);
+      const smsDate = paired
+        ? fmtLong(c.date1) + ' & ' + fmtLong(c.date2)
+        : fmtLong(c.date1);
+      const timeStr = fmtTime(c.time);
+      const sms = 'Hi Kat CCI, please sign me up for ' + t.smsLabel +
+        ' on ' + smsDate + (timeStr ? ' at ' + timeStr : '') + '. Please send payment details.';
+      const check = '<span class="uc-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>';
+      const features = t.features
+        ? '<div class="uc-features"><button type="button" class="uc-features-toggle">What\'s included</button><ul class="uc-features-body">' +
+            t.features.map(f => '<li>' + check + esc(f) + '</li>').join('') +
+          '</ul></div>'
+        : '';
+      return '<div class="uc-card' + (t.paired ? ' is-paired' : '') + '" data-dynamic="1">' +
+        '<span class="uc-tag">' + esc(t.tag) + '</span>' +
+        '<div class="uc-date">' + dateStr +
+          '<small>' + (timeStr ? esc(timeStr) + ' · ' : '') + esc(t.dayLabel) + '</small></div>' +
+        '<div class="uc-title">' + esc(t.title) + '</div>' +
+        '<div class="uc-duration">' + esc(t.duration) + '</div>' +
+        '<div class="uc-price">$' + esc(c.price) + '</div>' +
+        '<div class="uc-fineprint">' + t.fineprint + '</div>' +
+        features +
+        '<button class="btn-sms" data-sms="' + esc(sms) + '" data-classlabel="' + esc(t.formLabel || '') + '">💬 Text to Reserve</button>' +
+        '</div>';
+    }
+
+    function render(classes) {
+      grid.querySelectorAll('[data-dynamic]').forEach(el => el.remove());
+      const loading = document.getElementById('ucLoading');
+      if (loading) loading.remove();
+
+      const today = todayISO();
+      const upcoming = classes
+        .filter(c => TYPES[c.type] && (c.endDate || c.date1) >= today)
+        .sort((a, b) => (a.date1 || '').localeCompare(b.date1 || ''));
+
+      let html;
+      if (!upcoming.length) {
+        const sms = 'Hi Kat CCI, please sign me up for an upcoming class. What dates are available?';
+        html = '<div class="uc-empty" data-dynamic="1">' +
+          '<p>New class dates are being scheduled — check back soon.</p>' +
+          '<button class="btn-sms" data-sms="' + esc(sms) + '">💬 Text Us for Upcoming Dates</button>' +
+          '</div>';
+      } else {
+        html = upcoming.map(cardHTML).join('');
+      }
+      privateCard.insertAdjacentHTML('beforebegin', html);
+    }
+
+    // Reserve buttons on dynamically-rendered cards.
+    grid.addEventListener('click', e => {
+      const toggle = e.target.closest('.uc-features-toggle');
+      if (toggle) { toggle.parentElement.classList.toggle('open'); return; }
+      const btn = e.target.closest('[data-sms]');
+      if (btn && typeof openReserve === 'function') openReserve(btn.dataset.sms, btn.dataset.classlabel || '');
+    });
+
+    try {
+      const q = query(collection(db, 'classes'), orderBy('date1'));
+      onSnapshot(q,
+        snap => render(snap.docs.map(d => d.data())),
+        err => { console.error('Schedule load failed:', err); render([]); }
+      );
+    } catch (e) {
+      console.error('Schedule load failed:', e);
+      render([]);
+    }
+
+    // ── Contact / lead form ──────────────────────────────────────────
+    const leadForm = document.getElementById('leadForm');
+    if (leadForm) {
+      const statusEl = document.getElementById('leadStatus');
+      const submitBtn = document.getElementById('leadSubmit');
+      leadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const lead = {
+          name: document.getElementById('leadName').value.trim(),
+          phone: document.getElementById('leadPhone').value.trim(),
+          classType: document.getElementById('leadClass').value,
+          message: document.getElementById('leadMessage').value.trim()
+        };
+        if (!lead.name || !lead.phone || !lead.classType) return;
+
+        submitBtn.disabled = true;
+        statusEl.className = 'lead-status';
+        statusEl.textContent = 'Sending…';
+
+        try {
+          await addDoc(collection(db, 'leads'), { ...lead, createdAt: serverTimestamp() });
+
+          // Best-effort email notification (does not block success).
+          // _subject sets the email subject — the most visible part when forwarded to a phone as a text.
+          if (LEAD_EMAIL_ENDPOINT) {
+            fetch(LEAD_EMAIL_ENDPOINT, {
+              method: 'POST',
+              headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ...lead,
+                _subject: 'New lead: ' + lead.name + ', ' + lead.phone + ', ' + lead.classType
+              })
+            }).catch(() => {});
+          }
+
+          leadForm.reset();
+          statusEl.className = 'lead-status success';
+          statusEl.textContent = "Thanks! We'll reach out shortly to confirm your spot.";
+        } catch (err) {
+          console.error('Lead submit failed:', err);
+          statusEl.className = 'lead-status error';
+          statusEl.textContent = 'Something went wrong — please call or text us at (312) 799-9965.';
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
     }
   </script>
 

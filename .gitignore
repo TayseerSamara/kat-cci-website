@@ -1,0 +1,15 @@
+# Firebase CLI local cache
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+
+# Local tool / editor settings
+.claude/
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# Dependencies
+node_modules/

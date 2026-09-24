@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirm &amp; Reserve · KAT CCI</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#b06a75">
+  <meta name="robots" content="noindex">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #222222;
+      --navy-900: #111111;
+      --gold: #b06a75;
+      --gold-light: #c4888f;
+      --gray-bg: #f3f4f6;
+      --white: #ffffff;
+      --text: #374151;
+      --text-light: #6b7280;
+      --success: #22c55e;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      line-height: 1.6;
+      background: var(--gray-bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a { color: var(--gold); font-weight: 600; }
+
+    header {
+      background: var(--white);
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      padding: 14px 24px;
+      text-align: center;
+    }
+
+    header img { height: 60px; width: auto; }
+
+    main {
+      flex: 1;
+      max-width: 620px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 18px 56px;
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 32px 30px 30px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    }
+
+    .eyebrow {
+      color: var(--gold);
+      font-weight: 700;
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+    }
+
+    h1 {
+      color: var(--navy);
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin: 6px 0 6px;
+      line-height: 1.3;
+    }
+
+    .intro {
+      color: var(--text-light);
+      font-size: .95rem;
+      margin-bottom: 22px;
+    }
+
+    .ack {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 14px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+
+    .ack:hover { border-color: var(--gold-light); }
+
+    .ack.checked {
+      border-color: var(--success);
+      background: rgba(34,197,94,.05);
+    }
+
+    .ack input {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+
+    .ack span { font-size: .92rem; }
+    .ack strong { color: var(--navy); }
+
+    .continue-btn {
+      width: 100%;
+      margin-top: 18px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      color: var(--white);
+      font-weight: 800;
+      font-size: 1.05rem;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .2s, transform .15s;
+    }
+
+    .continue-btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .continue-btn:not(:disabled):hover { transform: translateY(-2px); }
+    .continue-btn:not(:disabled):active { transform: scale(.99); }
+
+    .finehint {
+      text-align: center;
+      font-size: .82rem;
+      color: var(--text-light);
+      margin-top: 12px;
+    }
+
+    .terms-link {
+      text-align: center;
+      font-size: .88rem;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #eceef1;
+    }
+
+    .lock-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: .82rem;
+      color: var(--text-light);
+      margin-top: 14px;
+    }
+
+    .error-box {
+      background: rgba(220,38,38,.07);
+      border: 1px solid rgba(220,38,38,.3);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .error-box h2 {
+      color: #dc2626;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+
+    .error-box p { font-size: .92rem; color: var(--text); }
+
+    footer {
+      background: var(--navy-900);
+      color: rgba(255,255,255,.55);
+      text-align: center;
+      padding: 22px 24px;
+      font-size: .82rem;
+    }
+
+    footer a { color: rgba(255,255,255,.75); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="/"><img src="kat-cci-logo.png" alt="KAT CCI"></a>
+  </header>
+
+  <main>
+    <div class="card">
+
+      <!-- Normal acknowledgment flow -->
+      <div id="ackFlow">
+        <span class="eyebrow">Reserve Your Seat</span>
+        <h1 id="heading">You're almost there</h1>
+        <p class="intro">Please review and check each item below. Once all are confirmed, you'll continue to our secure payment page.</p>
+
+        <div id="ackList"></div>
+
+        <button class="continue-btn" id="continueBtn" disabled>Continue to Secure Payment &rarr;</button>
+        <p class="finehint">You'll be taken to our secure Stripe checkout to complete payment.</p>
+        <div class="lock-row">🔒 Payments processed securely by Stripe</div>
+
+        <p class="terms-link">
+          <a href="/terms" target="_blank" rel="noopener">Read the full Terms &amp; Conditions</a>
+        </p>
+      </div>
+
+      <!-- Invalid link state -->
+      <div id="errorFlow" style="display:none;">
+        <div class="error-box">
+          <h2>This reservation link isn't valid</h2>
+          <p>The payment link may be incomplete or expired. Please text us at
+          <a href="sms:3127999965">(312) 799-9965</a> and we'll send you a fresh link.</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 KAT CCI — Illinois Concealed Carry License Training ·
+    <a href="/terms">Terms</a> · <a href="/">Home</a>
+  </footer>
+
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var to = params.get('to') || '';
+      var c = params.get('c') || '';
+
+      var CLASS_NAMES = {
+        ccl16: '16-Hour CCL Certification',
+        renewal3: '3-Hour CCL Renewal',
+        womens: "Women's Class",
+        private: 'Private 1-on-1 Class',
+        test: 'Test Class ($5)'
+      };
+
+      // All possible acknowledgment items.
+      var ACK = {
+        age: '<strong>Age requirement.</strong> I confirm I am at least <strong>21 years old</strong>.',
+        rangefee: '<strong>Range fees.</strong> I understand I am responsible for a <strong>$23 lane fee</strong> and a <strong>$6 range waiver fee</strong>, both required and paid directly at Eagle Sports Range.',
+        facility: '<strong>Facility rules.</strong> I understand <strong>no firearms or large bags/purses</strong> are allowed inside the facility. I may bring my own firearm for the live-fire range portion on the second day if I have one (optional).',
+        transport: '<strong>Transportation.</strong> I understand I am responsible for <strong>my own transportation</strong> to the gun range on the second day.',
+        payment: '<strong>Payment &amp; cancellation.</strong> I understand payment is due in full, is <strong>non-refundable</strong>, may be transferred once to a future class within 60 days (subject to availability), and that no-shows forfeit all payments.',
+        safety: '<strong>Safety &amp; waiver.</strong> I understand firearms training involves inherent risks. I will follow all range safety rules and instructor directions, and complete a separate liability waiver before class.',
+        terms: '<strong>Terms &amp; Conditions.</strong> I have read and agree to KAT CCI\'s full <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a>.'
+      };
+
+      // Which acknowledgments each class shows.
+      var CLASS_ACKS = {
+        ccl16:    ['age', 'rangefee', 'facility', 'transport', 'payment', 'safety', 'terms'],
+        renewal3: ['payment', 'safety', 'terms'],
+        womens:   ['payment', 'safety', 'terms'],
+        private:  ['payment', 'safety', 'terms'],
+        test:     ['age', 'rangefee', 'facility', 'transport', 'payment', 'safety', 'terms']
+      };
+      var DEFAULT_ACKS = ['payment', 'safety', 'terms'];
+
+      // Only allow forwarding to genuine Stripe checkout URLs (open-redirect guard).
+      function isValidStripe(url) {
+        try {
+          var u = new URL(url);
+          return u.protocol === 'https:' &&
+            (u.hostname === 'buy.stripe.com' || u.hostname === 'checkout.stripe.com');
+        } catch (e) { return false; }
+      }
+
+      var ackFlow = document.getElementById('ackFlow');
+      var errorFlow = document.getElementById('errorFlow');
+
+      if (!isValidStripe(to)) {
+        ackFlow.style.display = 'none';
+        errorFlow.style.display = 'block';
+        return;
+      }
+
+      if (c && CLASS_NAMES[c]) {
+        document.getElementById('heading').textContent =
+          "You're almost there — " + CLASS_NAMES[c];
+      }
+
+      // Render the acknowledgment checkboxes for this class.
+      var ackKeys = CLASS_ACKS[c] || DEFAULT_ACKS;
+      document.getElementById('ackList').innerHTML = ackKeys.map(function (k) {
+        return '<label class="ack"><input type="checkbox" class="ack-check">' +
+               '<span>' + ACK[k] + '</span></label>';
+      }).join('');
+
+      var checks = Array.prototype.slice.call(document.querySelectorAll('.ack-check'));
+      var continueBtn = document.getElementById('continueBtn');
+
+      function sync() {
+        var allChecked = checks.every(function (ch) { return ch.checked; });
+        continueBtn.disabled = !allChecked;
+      }
+
+      checks.forEach(function (ch) {
+        ch.addEventListener('change', function () {
+          ch.closest('.ack').classList.toggle('checked', ch.checked);
+          sync();
+        });
+      });
+
+      continueBtn.addEventListener('click', function () {
+        if (checks.every(function (ch) { return ch.checked; })) {
+          window.location.href = to;
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>

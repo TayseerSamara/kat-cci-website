@@ -1,0 +1,50 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Only these accounts may edit the public class schedule.
+    function isEditor() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'nora@katcci.com',
+          'tony@midwayspeedpark.com'
+        ];
+    }
+
+    // Public class schedule: anyone can read, only editors can write.
+    match /classes/{classId} {
+      allow read: if true;
+      allow create, update, delete: if isEditor();
+    }
+
+    // Student roster: private — editors only (contains personal info).
+    match /students/{studentId} {
+      allow read, write: if isEditor();
+    }
+
+    // Contact/lead form: anyone may submit (validated), only editors can read.
+    match /leads/{leadId} {
+      allow read, update, delete: if isEditor();
+      allow create: if
+        request.resource.data.keys().hasOnly(['name', 'phone', 'classType', 'message', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 5
+        && request.resource.data.phone.size() <= 40
+        && request.resource.data.classType is string
+        && request.resource.data.classType.size() <= 60
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 1000
+        && request.resource.data.createdAt == request.time;
+    }
+
+    // Everything else is locked down.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#b06a75" />
+  <title>Text Kat CCI — Reserve Your Spot</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #222222;
+      --gold: #b06a75;
+      --gold-light: #c4888f;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, var(--navy), #111);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    .card {
+      background: #fff;
+      color: #222;
+      border-radius: 20px;
+      max-width: 420px;
+      width: 100%;
+      padding: 36px 28px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,.4);
+    }
+    .logo { width: 90px; height: auto; margin-bottom: 18px; }
+    h1 { font-size: 1.3rem; margin-bottom: 8px; color: var(--navy); }
+    p { color: #555; font-size: .98rem; margin-bottom: 22px; }
+    .spinner {
+      width: 34px; height: 34px;
+      border: 3px solid #eee;
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      margin: 0 auto 18px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn {
+      display: block;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.05rem;
+      padding: 16px 20px;
+      border-radius: 999px;
+      text-decoration: none;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 18px rgba(176,106,117,.4);
+    }
+    .btn:active { transform: translateY(1px); }
+    .num { font-size: .9rem; color: #777; }
+    .num a { color: var(--gold); font-weight: 700; text-decoration: none; }
+    .back { display: inline-block; margin-top: 20px; color: #999; font-size: .85rem; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="kat-cci-logo.png" alt="Kat CCI" class="logo" />
+    <div class="spinner"></div>
+    <h1>Opening your text app…</h1>
+    <p>If your messaging app didn't open automatically, just tap the button below.</p>
+    <a id="smsBtn" class="btn" href="#">💬 Text Kat CCI</a>
+    <p class="num">Or text us directly at <a id="numLink" href="#">(312) 799-9965</a></p>
+    <a href="/" class="back">← Back to site</a>
+  </div>
+
+  <script>
+    var PHONE = '3127999965';
+    var params = new URLSearchParams(location.search);
+    var msg = params.get('m') || "Hi Kat CCI, please sign me up for an upcoming class. What dates are available?";
+    // iOS uses '&' as the sms body separator; Android uses '?'.
+    var sep = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent) ? '&' : '?';
+    var smsUrl = 'sms:' + PHONE + sep + 'body=' + encodeURIComponent(msg);
+    var plain = 'sms:' + PHONE;
+
+    document.getElementById('smsBtn').href = smsUrl;
+    document.getElementById('numLink').href = plain;
+
+    // Auto-launch the messaging app shortly after the page paints.
+    setTimeout(function () { window.location.href = smsUrl; }, 500);
+  </script>
+</body>
+</html>
