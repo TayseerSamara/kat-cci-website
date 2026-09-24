@@ -57,7 +57,7 @@ const seed = {
   settings: FRESH ? {} : {
     reviews: {
       googleReviewUrl: 'https://g.page/r/DEMO-ONLY/review',
-      defaultMessage: 'Hi {name}, thank you for training with KAT CCI! If you have a minute, we would really appreciate a quick Google review. It helps other students find us:\n\n{link}\n\n— Kat CCI',
+      defaultMessage: 'Hello, thank you for training with KAT CCI! If you have a minute, we would really appreciate a quick Google review. It helps other students find us:\n\n{link}\n\n— Kat CCI',
       updatedAt: ts(10), updatedBy: 'nora@katcci.com'
     }
   }

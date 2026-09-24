@@ -513,6 +513,36 @@
 
     .rh-search { margin-bottom: 6px; }
 
+    .rq-text {
+      background: rgba(34,34,34,.04);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: .92rem;
+      color: var(--navy);
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .btn.rq-copy { padding: 16px 14px; font-size: 1rem; }
+    .btn.rq-copy.copied { background: var(--success); }
+
+    .rr-toggle {
+      display: block;
+      width: 100%;
+      margin: 0 0 14px;
+      padding: 12px 14px;
+      border: 1.5px dashed #d1d5db;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--gold);
+      font-family: inherit;
+      font-size: .92rem;
+      font-weight: 800;
+      text-align: left;
+      cursor: pointer;
+    }
+    .rr-toggle:hover { border-color: var(--gold); }
+
     details.lc > summary {
       list-style: none;
       cursor: pointer;
@@ -938,6 +968,21 @@
 
       <div class="section-divider">Request a Review</div>
 
+      <div class="lc" id="rqCard">
+        <div class="lc-head">
+          <span class="lc-title">⭐ Google Review</span>
+        </div>
+        <div class="rq-text" id="rqText"></div>
+        <div class="lc-actions">
+          <button class="btn btn-copy rq-copy" id="rqCopyBtn">📋 Copy Review Message</button>
+        </div>
+        <p class="mgr-hint" style="margin-top:10px;">Paste it into any text conversation. Copying doesn't add anything to the review history.</p>
+      </div>
+
+      <button type="button" class="rr-toggle" id="rrAdvToggle" aria-expanded="false" aria-controls="rrAdvanced">▸ Send &amp; Track a Review Request</button>
+
+      <div id="rrAdvanced" hidden>
+
       <div class="lc" id="rrCard">
         <div class="lc-head">
           <span class="lc-title">⭐ Request a Google Review</span>
@@ -1015,6 +1060,8 @@
         </div>
         <div class="mgr-msg" id="rsMsg"></div>
       </details>
+
+      </div>
 
       <div class="section-divider">Website Inquiries</div>
 
@@ -1249,6 +1296,8 @@
 
 🧾 Bring:
 ${bringLines}
+
+💵 Payment: Zelle, Apple Pay, or Cash
 
 ${cfg.footer}
 
@@ -1869,8 +1918,10 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
     // Phase 1: nothing is sent automatically. Confirming opens the device's own
     // Messages (sms:) or email (mailto:) app with the text filled in, and staff tap
     // Send there. History records say "opened", never "sent" or "delivered".
+    // Built-in defaults, used only until Review Settings (settings/reviews) has been saved.
     const REVIEW_FALLBACK_MESSAGE =
-      'Hi {name}, thank you for training with KAT CCI! If you have a minute, we would really appreciate a quick Google review. It helps other students find us:\n\n{link}\n\n— Kat CCI';
+      'Hello, thank you for training with KAT CCI! If you have a minute, we would really appreciate a quick Google review. It helps other students find us:\n\n{link}\n\n— Kat CCI';
+    const DEFAULT_REVIEW_URL = 'https://g.page/r/CXwwM6FkrgrtECE/review';
     const REVIEW_EMAIL_SUBJECT = 'Thank you for training with KAT CCI';
     const REVIEW_METHOD = {
       sms:   { label: '💬 Text (SMS)', status: 'opened_sms',   app: 'Messages',       button: '💬 Open in Messages' },
@@ -1943,6 +1994,9 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
         (p.length >= 7 && normPhone(s.phone) === p) || (m && normEmail(s.email) === m)) || null;
     }
 
+    // The configured review link (Review Settings is the source of truth).
+    function reviewUrl() { return reviewSettings.googleReviewUrl || DEFAULT_REVIEW_URL; }
+
     function buildReviewMessage(name, url) {
       const template = (reviewSettings.defaultMessage || '').trim() || REVIEW_FALLBACK_MESSAGE;
       const first = String(name || '').trim().split(/\s+/)[0] || 'there';
@@ -2008,12 +2062,13 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
       rrName.value = ''; rrPhone.value = ''; rrEmail.value = '';
       setLinked(null);
       rrMethodTouched = false; setMethod('sms');
-      rrUrlEdited = false; rrUrl.value = reviewSettings.googleReviewUrl || '';
+      rrUrlEdited = false; rrUrl.value = reviewUrl();
       rrMessageEdited = false; refreshMessage();
       updateNotices();
     }
 
     function fillReviewForm(fields, student) {
+      setAdvanced(true);
       resetReviewForm();
       rrName.value = fields.name || '';
       rrPhone.value = fields.phone || '';
@@ -2248,16 +2303,16 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
 
     // ── settings ──
     function applyReviewSettings(data) {
-      const oldUrl = reviewSettings.googleReviewUrl || '';
+      const oldUrl = reviewUrl();
       reviewSettings = data || {};
-      const url = reviewSettings.googleReviewUrl || '';
+      const url = reviewUrl();
       if (!rrUrlEdited || rrUrl.value.trim() === oldUrl) { rrUrl.value = url; rrUrlEdited = false; }
       if (!rsDirty) {
         rsUrl.value = url;
         rsMessage.value = reviewSettings.defaultMessage || REVIEW_FALLBACK_MESSAGE;
       }
-      if (!url) rsCard.open = true;
       refreshMessage();
+      renderQuickReview();
     }
     rsUrl.addEventListener('input', () => { rsDirty = true; });
     rsMessage.addEventListener('input', () => { rsDirty = true; });
@@ -2286,7 +2341,33 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
       }
     };
 
+    // ── quick copy (the everyday workflow; not tracked in history) ──
+    const rqText = $('rqText'), rqCopyBtn = $('rqCopyBtn');
+    function quickReviewMessage() { return buildReviewMessage('', reviewUrl()); }
+    function renderQuickReview() { rqText.textContent = quickReviewMessage(); }
+    rqCopyBtn.onclick = async () => {
+      const ok = await copyText(quickReviewMessage());
+      if (!ok) { showToast("Couldn't copy. Long-press the message to copy it."); return; }
+      rqCopyBtn.classList.add('copied');
+      rqCopyBtn.textContent = '✓ Review message copied';
+      showToast('✓ Review message copied');
+      setTimeout(() => {
+        rqCopyBtn.classList.remove('copied');
+        rqCopyBtn.textContent = '📋 Copy Review Message';
+      }, 1600);
+    };
+
+    // ── advanced tools (tracked requests, history, settings), collapsed by default ──
+    const rrAdvanced = $('rrAdvanced'), rrAdvToggle = $('rrAdvToggle');
+    function setAdvanced(open) {
+      rrAdvanced.hidden = !open;
+      rrAdvToggle.setAttribute('aria-expanded', String(open));
+      rrAdvToggle.textContent = (open ? '▾ ' : '▸ ') + 'Send & Track a Review Request';
+    }
+    rrAdvToggle.onclick = () => setAdvanced(rrAdvanced.hidden);
+
     resetReviewForm();
+    renderQuickReview();
 
     // init form defaults
     applyTypeUI();
