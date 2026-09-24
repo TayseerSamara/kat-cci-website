@@ -2333,7 +2333,7 @@ header {
         <div class="uc-title">Private 1-on-1 Class</div>
         <div class="uc-duration">Personalized training, your pace</div>
         <div class="uc-price">From $250</div>
-        <div class="uc-fineprint">+ applicable state &amp; processing fees</div>
+        <div class="uc-fineprint">+ applicable state fees</div>
         <div class="uc-features">
           <button type="button" class="uc-features-toggle">What's included</button>
           <ul class="uc-features-body">
@@ -2373,7 +2373,7 @@ header {
     <!-- Additional fees disclosure -->
     <div class="fees-note">
       <strong>Heads up — not included in 16 hour or 3 hour CCL course price:</strong>
-      <span>$150 Illinois state fee · $3.38 processing fee · Range fees ($23) and lane waiver ($6) where applicable · Firearm rental with ammo $25 · Eye &amp; ear protection included.</span>
+      <span>$150 Illinois state fee · Range fees ($23) and lane waiver ($6) where applicable · Firearm rental with ammo $25 · Eye &amp; ear protection included.</span>
     </div>
   </section>
 
@@ -2635,7 +2635,7 @@ header {
         title: 'Illinois 16-Hour CCL Course',
         duration: 'Classroom + live-fire range',
         dayLabel: 'Day 1 + Day 2 · 16 hours total',
-        fineprint: '+ $150 state fee &amp; $3.38 processing',
+        fineprint: '+ $150 state fee',
         smsLabel: 'the 16-Hour CCL course',
         formLabel: '16-Hour CCL Course',
         paired: true,
@@ -2653,7 +2653,7 @@ header {
         title: 'Illinois CCL 3-Hour Renewal',
         duration: 'For current CCL holders renewing their license',
         dayLabel: '3 hours',
-        fineprint: '+ $150 state fee &amp; $3.38 processing',
+        fineprint: '+ $150 state fee',
         smsLabel: 'the 3-Hour Renewal',
         formLabel: '3-Hour Renewal',
         paired: false,
@@ -2671,7 +2671,7 @@ header {
         title: "Women's Firearm Training",
         duration: 'Women-only learning environment',
         dayLabel: '4 hours',
-        fineprint: '+ $3.38 processing',
+        fineprint: '',
         smsLabel: "the Women's Class",
         formLabel: "Women's Class",
         paired: false,
@@ -2750,7 +2750,7 @@ header {
         '<div class="uc-title">' + esc(t.title) + '</div>' +
         '<div class="uc-duration">' + esc(t.duration) + '</div>' +
         '<div class="uc-price">$' + esc(c.price) + '</div>' +
-        '<div class="uc-fineprint">' + t.fineprint + '</div>' +
+        (t.fineprint ? '<div class="uc-fineprint">' + t.fineprint + '</div>' : '') +
         features +
         '<button class="btn-sms" data-sms="' + esc(sms) + '" data-classlabel="' + esc(t.formLabel || '') + '">💬 Text to Reserve</button>' +
         '</div>';
@@ -2876,7 +2876,7 @@ header {
           '</span>' +
           '<span class="promo-save">SAVE $' + p.save + (p.percentLabel ? ' · ' + p.percentLabel : '') + '</span>' +
           '<span class="promo-cta">RESERVE FOR $' + p.price + ' →</span>' +
-          '<span class="promo-fine">' + esc(p.fineprint) + '</span>' +
+          (p.fineprint ? '<span class="promo-fine">' + esc(p.fineprint) + '</span>' : '') +
         '</a>';
       }
       // Headline only names a percentage when every offer shown carries that same percentage.

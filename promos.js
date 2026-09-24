@@ -22,7 +22,7 @@
       price: 160,                           // save $15 (about 8.6%), so no percentage shown
       badge: 'SPECIAL PROMO',
       showPercent: false,
-      fineprint: '+ $150 state fee & $3.38 processing',
+      fineprint: '+ $150 state fee',
       checkoutUrl: 'https://buy.stripe.com/bJe28rcY86Z9cEYeJJak005'   // $160.00 (verified)
     },
     {
@@ -35,7 +35,7 @@
       regular: 125,
       price: 100,
       showPercent: true,                    // exactly 20% off
-      fineprint: '+ $3.38 processing',
+      fineprint: '',
       checkoutUrl: 'https://buy.stripe.com/4gM5kD6zK4R15cwbxxak006'   // $100.00 (verified)
     }
   ];

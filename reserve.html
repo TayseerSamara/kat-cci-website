@@ -354,7 +354,7 @@
           '<div class="ps-save">You save $' + promo.save +
             (promo.percentLabel ? ' (' + promo.percentOff + '% off)' : '') +
             '. Discount already applied — no coupon code needed.</div>' +
-          '<div class="ps-fine">' + esc(promo.fineprint) + '</div>';
+          (promo.fineprint ? '<div class="ps-fine">' + esc(promo.fineprint) + '</div>' : '');
         ps.style.display = '';
         document.getElementById('continueBtn').innerHTML =
           'Continue to Secure Payment · $' + promo.price + ' &rarr;';
