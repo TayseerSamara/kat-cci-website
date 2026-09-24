@@ -186,6 +186,34 @@
     }
 
     footer a { color: rgba(255,255,255,.75); }
+
+    /* Promotional offer summary (?promo=…, offers in promos.js) */
+    .promo-summary {
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 4px 0 18px;
+      text-align: center;
+      background: rgba(176,106,117,.05);
+    }
+    .ps-badge {
+      display: inline-block;
+      background: #dc2626;
+      color: var(--white);
+      font-size: .74rem;
+      font-weight: 900;
+      letter-spacing: .5px;
+      padding: 3px 11px;
+      border-radius: 100px;
+      margin-bottom: 6px;
+    }
+    .ps-title { font-weight: 900; color: var(--navy); font-size: 1.08rem; }
+    .ps-when { font-weight: 700; font-size: .9rem; margin-top: 2px; }
+    .ps-price { margin-top: 6px; }
+    .ps-price s { color: var(--text-light); font-weight: 700; margin-right: 6px; }
+    .ps-price strong { color: var(--navy); font-size: 1.6rem; font-weight: 900; vertical-align: middle; }
+    .ps-save { font-size: .84rem; font-weight: 700; color: #b91c1c; margin-top: 2px; }
+    .ps-fine { font-size: .74rem; color: var(--text-light); margin-top: 6px; }
   </style>
 </head>
 <body>
@@ -201,6 +229,7 @@
       <div id="ackFlow">
         <span class="eyebrow">Reserve Your Seat</span>
         <h1 id="heading">You're almost there</h1>
+        <div class="promo-summary" id="promoSummary" style="display:none;"></div>
         <p class="intro">Please review and check each item below. Once all are confirmed, you'll continue to our secure payment page.</p>
 
         <div id="ackList"></div>
@@ -231,11 +260,31 @@
     <a href="/terms">Terms</a> · <a href="/">Home</a>
   </footer>
 
+  <script src="promos.js"></script>
   <script>
     (function () {
       var params = new URLSearchParams(window.location.search);
       var to = params.get('to') || '';
       var c = params.get('c') || '';
+
+      // Promotional offer: the class, price and Stripe link come from promos.js,
+      // never from the URL, so the promo price can't be pointed elsewhere.
+      var promoId = params.get('promo');
+      var promo = null;
+      if (promoId) {
+        promo = window.KAT_PROMOS ? window.KAT_PROMOS.findActive(promoId) : null;
+        if (!promo) {
+          document.getElementById('ackFlow').style.display = 'none';
+          var box = document.querySelector('#errorFlow .error-box');
+          box.querySelector('h2').textContent = 'This offer is no longer available';
+          box.querySelector('p').innerHTML = 'This promotion has ended or is full. Please text us at ' +
+            '<a href="sms:3127999965">(312) 799-9965</a> and we\'ll help you find a class.';
+          document.getElementById('errorFlow').style.display = 'block';
+          return;
+        }
+        to = window.KAT_PROMOS.checkoutUrl(promo, window.KAT_PROMOS.readAttribution());
+        c = promo.classKey;
+      }
 
       var CLASS_NAMES = {
         ccl16: '16-Hour CCL Certification',
@@ -287,6 +336,27 @@
       if (c && CLASS_NAMES[c]) {
         document.getElementById('heading').textContent =
           "You're almost there — " + CLASS_NAMES[c];
+      }
+
+      if (promo) {
+        var ps = document.getElementById('promoSummary');
+        var esc = function (t) {
+          return String(t).replace(/[&<>"]/g, function (ch) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch];
+          });
+        };
+        ps.innerHTML =
+          '<span class="ps-badge">' + promo.percentOff + '% OFF</span>' +
+          '<div class="ps-title">' + esc(promo.title) + '</div>' +
+          '<div class="ps-when">' + esc(promo.dates) + ' · ' + esc(promo.time) + '</div>' +
+          '<div class="ps-price"><s aria-label="Regular price $' + promo.regular + '">$' + promo.regular + '</s>' +
+            '<strong>$' + promo.price + '</strong></div>' +
+          '<div class="ps-save">You save $' + promo.save + ' (' + promo.percentOff + '% off). ' +
+            'Discount already applied, no coupon code needed.</div>' +
+          '<div class="ps-fine">' + esc(promo.fineprint) + '</div>';
+        ps.style.display = '';
+        document.getElementById('continueBtn').innerHTML =
+          'Continue to Secure Payment · $' + promo.price + ' &rarr;';
       }
 
       // Render the acknowledgment checkboxes for this class.
