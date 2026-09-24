@@ -1122,11 +1122,22 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
   <!-- ═══════════════ SCHEDULE MANAGER (Firebase) ═══════════════ -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
-      from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-    import { getFirestore, collection, query, orderBy, onSnapshot,
-             addDoc, updateDoc, deleteDoc, doc, serverTimestamp }
-      from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+    import * as firebaseAuth from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+    import * as firebaseStore from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+    // Demo mode (?demo) swaps Firebase for in-memory sample data so the tools can be
+    // tried without touching the real database. Only allowed on localhost and preview
+    // channels (their hostnames contain "--"), never on katcci.com / katcci.web.app.
+    const DEMO_HOST = ['localhost', '127.0.0.1'].includes(location.hostname) ||
+      location.hostname.includes('--');
+    const demo = DEMO_HOST && new URLSearchParams(location.search).has('demo')
+      ? await import('./pay-demo.js') : null;
+
+    const { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } =
+      demo ? demo.auth : firebaseAuth;
+    const { getFirestore, collection, query, orderBy, onSnapshot,
+            addDoc, updateDoc, deleteDoc, setDoc, doc, serverTimestamp } =
+      demo ? demo.store : firebaseStore;
 
     const firebaseConfig = {
       apiKey: "AIzaSyCSZwkehqzmMChhaW93uPScZ3GCIjqnO2E",
