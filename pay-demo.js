@@ -184,4 +184,15 @@ banner.style.cssText = 'position:sticky;top:0;z-index:200;margin:-16px -16px 16p
   'background:#1d4ed8;color:#fff;font-size:.82rem;font-weight:700;text-align:center;line-height:1.4;';
 banner.textContent = '🧪 DEMO MODE: sample data only. Nothing is read from or saved to Firebase, and it all resets on reload.' +
   (FRESH ? ' (Fresh start: no review settings or history yet.)' : '');
+const opened = document.createElement('div');
+opened.style.cssText = 'margin-top:4px;font-weight:600;font-family:Menlo,monospace;font-size:.72rem;' +
+  'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.9;';
+banner.appendChild(opened);
 document.body.prepend(banner);
+
+// Called by pay.html right before it opens an sms:/mailto: link, so the link is
+// visible even on a computer with no texting app.
+export function noteOpened(href) {
+  window.__demoLastOpened = href;
+  opened.textContent = 'Last link opened: ' + decodeURIComponent(href);
+}
