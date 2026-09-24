@@ -40,6 +40,12 @@
     }
   ];
 
+  // Campaign wording used by the homepage popup and its reopen button.
+  var CAMPAIGN = {
+    note: 'Limited-time website promotion — book through this offer to receive the promotional price.',
+    buttonLabel: '🎉 October Special — View Offers'
+  };
+
   // Ad / campaign parameters carried from the landing page through to Stripe.
   var ATTRIBUTION_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
                           'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid'];
@@ -123,6 +129,7 @@
   }
 
   window.KAT_PROMOS = {
+    campaign: CAMPAIGN,
     activePromos: activePromos,
     findActive: findActive,
     readAttribution: readAttribution,

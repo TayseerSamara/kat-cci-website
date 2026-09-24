@@ -1444,6 +1444,41 @@
       border-radius: 10px;
     }
     .promo-fine { font-size: .74rem; color: var(--text-light); margin-top: 8px; }
+    .promo-note {
+      font-size: .8rem;
+      color: var(--text-light);
+      line-height: 1.45;
+      margin: -8px 0 14px;
+    }
+    /* Reopen button, shown after the popup has been closed */
+    .promo-pill {
+      position: fixed;
+      left: 28px;
+      bottom: 28px;
+      z-index: 998;
+      border: 1.5px solid var(--gold);
+      background: var(--white);
+      color: var(--gold);
+      font-family: inherit;
+      font-size: .84rem;
+      font-weight: 800;
+      padding: 10px 16px;
+      border-radius: 100px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.12);
+      cursor: pointer;
+    }
+    .promo-pill:hover { background: rgba(176,106,117,.08); }
+    .promo-pill[hidden] { display: none; }
+    @media (max-width: 480px) {
+      .promo-pill {
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 82px;                       /* sits just above the full-width Reserve button */
+        font-size: .8rem;
+        padding: 8px 14px;
+        white-space: nowrap;
+      }
+    }
     .promo-sr {
       position: absolute;
       width: 1px;
@@ -2822,7 +2857,8 @@ header {
       var promos = P.activePromos();
       if (!promos.length) return;
       var SEEN = 'katcci_promo_seen';
-      try { if (sessionStorage.getItem(SEEN)) return; } catch (e) {}
+      var seen = false;
+      try { seen = !!sessionStorage.getItem(SEEN); } catch (e) {}
 
       function esc(s) {
         return String(s).replace(/[&<>"]/g, function (c) {
@@ -2846,34 +2882,56 @@ header {
       // Headline only names a percentage when every offer shown carries that same percentage.
       var samePercent = promos.every(function (p) { return p.percentLabel && p.percentLabel === promos[0].percentLabel; });
 
-      var overlay = document.createElement('div');
-      overlay.className = 'promo-overlay';
-      overlay.id = 'promoModal';
-      overlay.innerHTML =
-        '<div class="promo-dialog" role="dialog" aria-modal="true" aria-labelledby="promoTitle">' +
-          '<button type="button" class="promo-close" aria-label="Close">&times;</button>' +
-          '<div class="promo-eyebrow">Limited-time offer</div>' +
-          '<h2 id="promoTitle">' + (samePercent ? 'Save ' + promos[0].percentOff + '% on upcoming classes' : 'Special class offers') + '</h2>' +
-          promos.map(card).join('') +
-        '</div>';
+      var headline = samePercent ? 'Save ' + promos[0].percentOff + '% on upcoming classes' : 'Special class offers';
 
-      function close() {
-        overlay.classList.remove('open');
-        document.body.style.overflow = '';
-        setTimeout(function () { overlay.remove(); }, 250);
-        document.removeEventListener('keydown', onKey);
-      }
-      function onKey(e) { if (e.key === 'Escape') close(); }
-      overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
-      overlay.querySelector('.promo-close').addEventListener('click', close);
-      document.addEventListener('keydown', onKey);
+      // Small reopen button; visible whenever the popup is closed.
+      var pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'promo-pill';
+      pill.id = 'promoPill';
+      pill.textContent = P.campaign.buttonLabel;
+      pill.hidden = true;
+      pill.addEventListener('click', open);
+      document.body.appendChild(pill);
 
-      setTimeout(function () {
+      var overlay = null;
+      function open() {
+        if (overlay) return;
+        overlay = document.createElement('div');
+        overlay.className = 'promo-overlay';
+        overlay.id = 'promoModal';
+        overlay.innerHTML =
+          '<div class="promo-dialog" role="dialog" aria-modal="true" aria-labelledby="promoTitle">' +
+            '<button type="button" class="promo-close" aria-label="Close">&times;</button>' +
+            '<div class="promo-eyebrow">Limited-time offer</div>' +
+            '<h2 id="promoTitle">' + headline + '</h2>' +
+            '<p class="promo-note">' + esc(P.campaign.note) + '</p>' +
+            promos.map(card).join('') +
+          '</div>';
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+        overlay.querySelector('.promo-close').addEventListener('click', close);
+        document.addEventListener('keydown', onKey);
+        pill.hidden = true;
         document.body.appendChild(overlay);
         document.body.style.overflow = 'hidden';
         requestAnimationFrame(function () { overlay.classList.add('open'); });
         try { sessionStorage.setItem(SEEN, '1'); } catch (e) {}
-      }, 800);
+      }
+      function close() {
+        var el = overlay;
+        if (!el) return;
+        overlay = null;
+        el.classList.remove('open');
+        document.body.style.overflow = '';
+        setTimeout(function () { el.remove(); }, 250);
+        document.removeEventListener('keydown', onKey);
+        pill.hidden = false;
+      }
+      function onKey(e) { if (e.key === 'Escape') close(); }
+
+      // Opens by itself once per browser session; after that only from the button.
+      if (seen) pill.hidden = false;
+      else setTimeout(open, 800);
     })();
   </script>
 
