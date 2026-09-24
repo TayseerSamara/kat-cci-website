@@ -2,6 +2,9 @@
 // confirmed on the /reserve page. Regular class prices elsewhere on the site are
 // unchanged. Ad parameters (utm_*, gclid, ...) are carried to Stripe when present.
 //
+// Labels: `badge` is the headline tag; a percentage ("20% OFF") is shown only when
+// showPercent is true, so no promo claims a percentage unless it is set on purpose.
+//
 // A promo only appears when:
 //   • checkoutUrl is set to a KAT Stripe Payment Link that charges exactly `price`, and
 //   • today (Chicago time) is on or before `showUntil`.
@@ -15,8 +18,10 @@
       dates: 'Sat, Oct 17 & Sun, Oct 18',
       time: '10:00 AM',
       showUntil: '2026-10-16',              // last day to book (day before class)
-      regular: 200,                         // promo basis for this class
-      price: 160,
+      regular: 175,
+      price: 160,                           // save $15 (about 8.6%), so no percentage shown
+      badge: 'SPECIAL PROMO',
+      showPercent: false,
       fineprint: '+ $150 state fee & $3.38 processing',
       checkoutUrl: 'https://buy.stripe.com/bJe28rcY86Z9cEYeJJak005'   // $160.00 (verified)
     },
@@ -29,6 +34,7 @@
       showUntil: '2026-10-23',
       regular: 125,
       price: 100,
+      showPercent: true,                    // exactly 20% off
       fineprint: '+ $3.38 processing',
       checkoutUrl: 'https://buy.stripe.com/4gM5kD6zK4R15cwbxxak006'   // $100.00 (verified)
     }
@@ -63,6 +69,8 @@
     for (var k in p) out[k] = p[k];
     out.save = p.regular - p.price;
     out.percentOff = Math.round((1 - p.price / p.regular) * 100);
+    out.percentLabel = p.showPercent ? out.percentOff + '% OFF' : '';
+    out.badgeText = p.badge || out.percentLabel || 'SPECIAL PROMO';
     return out;
   }
 

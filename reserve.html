@@ -209,9 +209,9 @@
     }
     .ps-title { font-weight: 900; color: var(--navy); font-size: 1.08rem; }
     .ps-when { font-weight: 700; font-size: .9rem; margin-top: 2px; }
-    .ps-price { margin-top: 6px; }
-    .ps-price s { color: var(--text-light); font-weight: 700; margin-right: 6px; }
-    .ps-price strong { color: var(--navy); font-size: 1.6rem; font-weight: 900; vertical-align: middle; }
+    .ps-row { margin-top: 4px; font-size: .92rem; font-weight: 700; color: var(--text-light); }
+    .ps-row.ps-promo { color: var(--navy); }
+    .ps-row strong { font-size: 1.5rem; font-weight: 900; vertical-align: middle; margin-left: 4px; }
     .ps-save { font-size: .84rem; font-weight: 700; color: #b91c1c; margin-top: 2px; }
     .ps-fine { font-size: .74rem; color: var(--text-light); margin-top: 6px; }
   </style>
@@ -346,13 +346,14 @@
           });
         };
         ps.innerHTML =
-          '<span class="ps-badge">' + promo.percentOff + '% OFF</span>' +
+          '<span class="ps-badge">' + esc(promo.badgeText) + '</span>' +
           '<div class="ps-title">' + esc(promo.title) + '</div>' +
           '<div class="ps-when">' + esc(promo.dates) + ' · ' + esc(promo.time) + '</div>' +
-          '<div class="ps-price"><s aria-label="Regular price $' + promo.regular + '">$' + promo.regular + '</s>' +
-            '<strong>$' + promo.price + '</strong></div>' +
-          '<div class="ps-save">You save $' + promo.save + ' (' + promo.percentOff + '% off). ' +
-            'Discount already applied, no coupon code needed.</div>' +
+          '<div class="ps-row">Regular price $' + promo.regular + '</div>' +
+          '<div class="ps-row ps-promo">Promotional price <strong>$' + promo.price + '</strong></div>' +
+          '<div class="ps-save">You save $' + promo.save +
+            (promo.percentLabel ? ' (' + promo.percentOff + '% off)' : '') +
+            '. Discount already applied — no coupon code needed.</div>' +
           '<div class="ps-fine">' + esc(promo.fineprint) + '</div>';
         ps.style.display = '';
         document.getElementById('continueBtn').innerHTML =

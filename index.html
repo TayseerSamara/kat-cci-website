@@ -2831,19 +2831,20 @@ header {
       }
       function card(p) {
         return '<a class="promo-card" href="' + esc(P.reserveUrl(p, attr)) + '" data-promo="' + esc(p.id) + '">' +
-          '<span class="promo-badge">' + p.percentOff + '% OFF</span>' +
+          '<span class="promo-badge">' + esc(p.badgeText) + '</span>' +
           '<span class="promo-title">' + esc(p.title) + '</span>' +
           '<span class="promo-when">' + esc(p.dates) + ' · ' + esc(p.time) + '</span>' +
           '<span class="promo-prices">' +
             '<span class="promo-sr">Regular price </span><s class="promo-regular">$' + p.regular + '</s>' +
             '<span class="promo-sr">, now </span><span class="promo-price">$' + p.price + '</span>' +
           '</span>' +
-          '<span class="promo-save">SAVE $' + p.save + ' · ' + p.percentOff + '% OFF</span>' +
+          '<span class="promo-save">SAVE $' + p.save + (p.percentLabel ? ' · ' + p.percentLabel : '') + '</span>' +
           '<span class="promo-cta">RESERVE FOR $' + p.price + ' →</span>' +
           '<span class="promo-fine">' + esc(p.fineprint) + '</span>' +
         '</a>';
       }
-      var samePercent = promos.every(function (p) { return p.percentOff === promos[0].percentOff; });
+      // Headline only names a percentage when every offer shown carries that same percentage.
+      var samePercent = promos.every(function (p) { return p.percentLabel && p.percentLabel === promos[0].percentLabel; });
 
       var overlay = document.createElement('div');
       overlay.className = 'promo-overlay';
