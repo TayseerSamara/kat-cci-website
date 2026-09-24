@@ -1351,7 +1351,7 @@
     }
 
     /* ───────── CALENDAR MODAL ───────── */
-    /* ── Ad-visitor promo popup (promos.js) ── */
+    /* ── Promo popup (promos.js) ── */
     .promo-overlay {
       position: fixed;
       inset: 0;
@@ -2812,15 +2812,15 @@ header {
     }
   </script>
 
-  <!-- Ad-visitor promo popup: offers and checkout links live in promos.js -->
+  <!-- Promo popup, once per browser session: offers and checkout links live in promos.js -->
   <script src="promos.js"></script>
   <script>
     (function () {
       var P = window.KAT_PROMOS;
       if (!P) return;
-      var attr = P.readAttribution();      // also remembers ad parameters for this visit
+      var attr = P.readAttribution();      // remembers any ad parameters for this visit
       var promos = P.activePromos();
-      if (!P.isAdVisit(attr) || !promos.length) return;
+      if (!promos.length) return;
       var SEEN = 'katcci_promo_seen';
       try { if (sessionStorage.getItem(SEEN)) return; } catch (e) {}
 

@@ -1,5 +1,6 @@
-// Promotional offers shown to ad (PPC) visitors, shared by the homepage popup
-// and the /reserve page. Regular class prices elsewhere on the site are unchanged.
+// Promotional offers shown in the homepage popup (once per browser session) and
+// confirmed on the /reserve page. Regular class prices elsewhere on the site are
+// unchanged. Ad parameters (utm_*, gclid, ...) are carried to Stripe when present.
 //
 // A promo only appears when:
 //   • checkoutUrl is set to a KAT Stripe Payment Link that charges exactly `price`, and
@@ -14,8 +15,8 @@
       dates: 'Sat, Oct 17 & Sun, Oct 18',
       time: '10:00 AM',
       showUntil: '2026-10-16',              // last day to book (day before class)
-      regular: 175,
-      price: 140,
+      regular: 200,                         // promo basis for this class
+      price: 160,
       fineprint: '+ $150 state fee & $3.38 processing',
       checkoutUrl: ''
     },
@@ -93,10 +94,6 @@
     return stored;
   }
 
-  function isAdVisit(attr) {
-    return Object.keys(attr || {}).length > 0;
-  }
-
   function reserveUrl(p, attr) {
     var q = new URLSearchParams({ promo: p.id });
     ATTRIBUTION_KEYS.forEach(function (k) { if (attr && attr[k]) q.set(k, attr[k]); });
@@ -121,7 +118,6 @@
     activePromos: activePromos,
     findActive: findActive,
     readAttribution: readAttribution,
-    isAdVisit: isAdVisit,
     reserveUrl: reserveUrl,
     checkoutUrl: checkoutUrl
   };
