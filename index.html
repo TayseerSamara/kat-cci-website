@@ -884,6 +884,8 @@
       font-family: inherit;
     }
 
+    .uc-card a.btn-reserve { text-decoration: none; }
+
     .uc-card .btn-sms:hover {
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(176,106,117,.4);
@@ -2724,6 +2726,16 @@ header {
         ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     }
 
+    // Scheduled classes book online (same flow as the promotions); price and Stripe checkout come
+    // from booking.js, never the URL. Falls back to texting if the class can't be booked online.
+    function reserveButton(c, sms, t) {
+      const B = window.KAT_BOOKING, P = window.KAT_PROMOS;
+      if (B && P && c.id && B.isBookable(c)) {
+        return '<a class="btn-sms btn-reserve" href="' + esc(B.reserveUrl(c.id, P.readAttribution())) + '">Reserve Your Spot →</a>';
+      }
+      return '<button class="btn-sms" data-sms="' + esc(sms) + '" data-classlabel="' + esc(t.formLabel || '') + '">💬 Text to Reserve</button>';
+    }
+
     function cardHTML(c) {
       const t = TYPES[c.type];
       if (!t) return '';
@@ -2752,7 +2764,7 @@ header {
         '<div class="uc-price">$' + esc(c.price) + '</div>' +
         (t.fineprint ? '<div class="uc-fineprint">' + t.fineprint + '</div>' : '') +
         features +
-        '<button class="btn-sms" data-sms="' + esc(sms) + '" data-classlabel="' + esc(t.formLabel || '') + '">💬 Text to Reserve</button>' +
+        reserveButton(c, sms, t) +
         '</div>';
     }
 
@@ -2790,7 +2802,7 @@ header {
     try {
       const q = query(collection(db, 'classes'), orderBy('date1'));
       onSnapshot(q,
-        snap => render(snap.docs.map(d => d.data())),
+        snap => render(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
         err => { console.error('Schedule load failed:', err); render([]); }
       );
     } catch (e) {
@@ -2849,6 +2861,7 @@ header {
 
   <!-- Promo popup, once per browser session: offers and checkout links live in promos.js -->
   <script src="promos.js"></script>
+  <script src="booking.js"></script>
   <script>
     (function () {
       var P = window.KAT_PROMOS;
