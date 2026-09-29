@@ -182,6 +182,31 @@
 
     .btn-preview:hover { background: #dde0e6; }
 
+    /* Class reminder (for students already confirmed) */
+    .btn-remind {
+      background: var(--white);
+      color: var(--gold);
+      border: 1.5px solid var(--gold);
+    }
+    .btn-remind:hover { background: rgba(176,106,117,.08); }
+    .btn-remind.copied { background: var(--success); border-color: var(--success); color: var(--white); }
+    .lc-actions + .lc-actions.remind-actions { margin-top: 8px; }
+    .lc-sched { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: -4px 0 10px; }
+    .lc-sched:empty { display: none; }
+    .lc-sched-label { font-size: .72rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .5px; }
+    .sched-chip {
+      border: 1.5px solid #e5e7eb;
+      background: var(--white);
+      color: var(--navy);
+      border-radius: 100px;
+      padding: 5px 10px;
+      font-family: inherit;
+      font-size: .78rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .sched-chip.active { border-color: var(--gold); background: rgba(176,106,117,.1); color: var(--gold); }
+
     .lc-preview {
       margin-top: 10px;
       padding: 12px 14px;
@@ -631,12 +656,23 @@
         <label>Class date (optional — adds to message)</label>
         <input type="date" data-field="date">
       </div>
+      <div class="lc-sched" data-sched-type="ccl"></div>
+      <div class="lc-row">
+        <label>Class start time (optional — for reminder)</label>
+        <input type="time" data-field="time">
+      </div>
       <div class="lc-actions">
         <button class="btn btn-copy" data-action="copy">📋 Copy SMS</button>
         <button class="btn btn-preview" data-action="preview" title="Preview message">👁️</button>
       </div>
       <div class="lc-missing">⚠️ Add your Stripe link first.</div>
       <pre class="lc-preview"></pre>
+      <div class="lc-actions remind-actions">
+        <button class="btn btn-remind" data-action="remind-copy">🔔 Copy Class Reminder</button>
+        <button class="btn btn-preview" data-action="remind-preview" title="Preview reminder">👁️</button>
+      </div>
+      <div class="lc-missing lc-remind-missing">⚠️ Pick the class date first.</div>
+      <pre class="lc-preview lc-remind-preview"></pre>
     </div>
 
     <!-- ═══ 3-HOUR RENEWAL ═══ -->
@@ -653,12 +689,23 @@
         <label>Class date (optional — adds to message)</label>
         <input type="date" data-field="date">
       </div>
+      <div class="lc-sched" data-sched-type="renewal"></div>
+      <div class="lc-row">
+        <label>Class start time (optional — for reminder)</label>
+        <input type="time" data-field="time">
+      </div>
       <div class="lc-actions">
         <button class="btn btn-copy" data-action="copy">📋 Copy SMS</button>
         <button class="btn btn-preview" data-action="preview" title="Preview message">👁️</button>
       </div>
       <div class="lc-missing">⚠️ Add your Stripe link first.</div>
       <pre class="lc-preview"></pre>
+      <div class="lc-actions remind-actions">
+        <button class="btn btn-remind" data-action="remind-copy">🔔 Copy Class Reminder</button>
+        <button class="btn btn-preview" data-action="remind-preview" title="Preview reminder">👁️</button>
+      </div>
+      <div class="lc-missing lc-remind-missing">⚠️ Pick the class date first.</div>
+      <pre class="lc-preview lc-remind-preview"></pre>
     </div>
 
     <!-- ═══ WOMEN'S CLASS ═══ -->
@@ -675,12 +722,23 @@
         <label>Class date (optional — adds to message)</label>
         <input type="date" data-field="date">
       </div>
+      <div class="lc-sched" data-sched-type="womens"></div>
+      <div class="lc-row">
+        <label>Class start time (optional — for reminder)</label>
+        <input type="time" data-field="time">
+      </div>
       <div class="lc-actions">
         <button class="btn btn-copy" data-action="copy">📋 Copy SMS</button>
         <button class="btn btn-preview" data-action="preview" title="Preview message">👁️</button>
       </div>
       <div class="lc-missing">⚠️ Add your Stripe link first.</div>
       <pre class="lc-preview"></pre>
+      <div class="lc-actions remind-actions">
+        <button class="btn btn-remind" data-action="remind-copy">🔔 Copy Class Reminder</button>
+        <button class="btn btn-preview" data-action="remind-preview" title="Preview reminder">👁️</button>
+      </div>
+      <div class="lc-missing lc-remind-missing">⚠️ Pick the class date first.</div>
+      <pre class="lc-preview lc-remind-preview"></pre>
     </div>
 
     <!-- ═══ PRIVATE CLASS ═══ -->
@@ -697,12 +755,22 @@
         <label>Class date (optional — adds to message)</label>
         <input type="date" data-field="date">
       </div>
+      <div class="lc-row">
+        <label>Class start time (optional — for reminder)</label>
+        <input type="time" data-field="time">
+      </div>
       <div class="lc-actions">
         <button class="btn btn-copy" data-action="copy">📋 Copy SMS</button>
         <button class="btn btn-preview" data-action="preview" title="Preview message">👁️</button>
       </div>
       <div class="lc-missing">⚠️ Add your Stripe link first.</div>
       <pre class="lc-preview"></pre>
+      <div class="lc-actions remind-actions">
+        <button class="btn btn-remind" data-action="remind-copy">🔔 Copy Class Reminder</button>
+        <button class="btn btn-preview" data-action="remind-preview" title="Preview reminder">👁️</button>
+      </div>
+      <div class="lc-missing lc-remind-missing">⚠️ Pick the class date first.</div>
+      <pre class="lc-preview lc-remind-preview"></pre>
     </div>
 
     <!-- ═══ TEST CARD ($5) — internal use only ═══ -->
@@ -1338,6 +1406,164 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
 — Kat CCI`;
     }
 
+    // ── Class reminder: for students already confirmed. No payment link, price or request to pay. ──
+    const REMINDER_ADDRESS = '4604 W 137th Street, Unit D, Crestwood, IL 60445';
+    const REMINDER = {
+      ccl16: {
+        name: '16-Hour CCL Certification', schedType: 'ccl', paired: true,
+        bring: ['Valid photo ID or FOID card', 'Notebook + pen (optional)'],
+        notes: ['For Day 2 (range day), bring a firearm and 30 rounds of ammo. No firearm? Rentals are available for $25 with ammo included.',
+                'We provide course materials and eye & ear protection.']
+      },
+      renewal3: {
+        name: '3-Hour CCL Renewal', schedType: 'renewal',
+        bring: ['Valid photo ID or FOID card', 'Your firearm + 30 rounds of ammo (or rent from us — $25, ammo included)', 'Comfortable closed-toe shoes'],
+        notes: ['Range fees ($23) and lane waiver ($6) are paid on-site.', 'We provide eye & ear protection.']
+      },
+      womens: {
+        name: "Women's Class", schedType: 'womens',
+        bring: ['Valid photo ID'],
+        notes: ['We provide everything else — course materials and eye & ear protection.']
+      },
+      private: {
+        name: 'Private 1-on-1 Class', schedType: null,
+        bring: ['Valid photo ID'],
+        notes: ['We provide everything else — course materials and eye & ear protection.']
+      }
+    };
+
+    // Scheduled classes, published by the Firebase script below (public schedule).
+    function katSchedule() { return Array.isArray(window.KAT_SCHEDULE) ? window.KAT_SCHEDULE : []; }
+    function localTodayISO() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function scheduledFor(key, date) {
+      const type = REMINDER[key] && REMINDER[key].schedType;
+      if (!type || !date) return null;
+      return katSchedule().find(c => c.type === type && (c.date1 === date || c.date2 === date)) || null;
+    }
+    function upcomingFor(key) {
+      const type = REMINDER[key] && REMINDER[key].schedType;
+      if (!type) return [];
+      const today = localTodayISO();
+      return katSchedule().filter(c => c.type === type && (c.endDate || c.date1) >= today)
+        .sort((a, b) => a.date1.localeCompare(b.date1));
+    }
+    function reminderDay(iso) {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    }
+    function reminderTime(t) {
+      const [h, m] = t.split(':').map(Number);
+      return ((h % 12) || 12) + ':' + String(m).padStart(2, '0') + ' ' + (h >= 12 ? 'PM' : 'AM');
+    }
+    function clockEmoji(t) {
+      const [h, m] = t.split(':').map(Number);
+      return String.fromCodePoint((m >= 30 ? 0x1F55C : 0x1F550) + (((h % 12) || 12) - 1));
+    }
+    function schedLabel(c) {
+      const short = iso => { const [y, m, d] = iso.split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); };
+      return short(c.date1) + (c.date2 && c.date2 !== c.date1 ? ' & ' + short(c.date2) : '') + (c.time ? ' · ' + reminderTime(c.time) : '');
+    }
+
+    function buildReminder(key) {
+      const r = REMINDER[key];
+      if (!r) return null;
+      const cardState = state[key] || {};
+      const sched = scheduledFor(key, cardState.date);
+      const date1 = sched ? sched.date1 : cardState.date;
+      if (!date1) return null;
+      const date2 = sched && r.paired && sched.date2 && sched.date2 !== sched.date1 ? sched.date2 : '';
+      const time = (sched && sched.time) || cardState.time || '';
+      const when = '📅 ' + reminderDay(date1) + (date2 ? ' & ' + reminderDay(date2) : '');
+      const clock = time ? '\n' + clockEmoji(time) + ' ' + reminderTime(time) : '';
+      return `Hi! Your seat is confirmed for the KAT CCI ${r.name}.
+
+${when}${clock}
+📍 ${REMINDER_ADDRESS}
+
+🧾 Bring:
+${r.bring.map(b => '• ' + b).join('\n')}
+
+${r.notes.join('\n\n')}
+
+See you soon!
+— KAT CCI`;
+    }
+
+    // Quick-pick buttons for upcoming scheduled classes on each class card.
+    function renderSchedChips() {
+      document.querySelectorAll('.lc-sched[data-sched-type]').forEach(box => {
+        const card = box.closest('.lc');
+        const key = card.dataset.key;
+        const list = upcomingFor(key);
+        const current = (state[key] || {}).date || '';
+        box.innerHTML = list.length
+          ? '<span class="lc-sched-label">Scheduled:</span>' + list.map(c =>
+              '<button type="button" class="sched-chip' + ((c.date1 === current || c.date2 === current) ? ' active' : '') +
+              '" data-sched-date="' + c.date1 + '">' + schedLabel(c) + '</button>').join('')
+          : '';
+      });
+    }
+    function setField(card, field, value) {
+      const input = card.querySelector('[data-field="' + field + '"]');
+      if (!input || input.value === value) return;
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));   // saved by handleFieldChange
+    }
+    // When a date matches a scheduled class, fill in that class's start time.
+    function syncFromSchedule(card) {
+      const key = card.dataset.key;
+      const sched = scheduledFor(key, (state[key] || {}).date);
+      if (sched && sched.time) setField(card, 'time', sched.time);
+      renderSchedChips();
+    }
+    document.addEventListener('input', e => {
+      if (!e.target.matches('[data-field="date"]')) return;
+      const card = e.target.closest('.lc');
+      if (card && REMINDER[card.dataset.key]) syncFromSchedule(card);
+    });
+    document.addEventListener('click', e => {
+      const chip = e.target.closest('.sched-chip');
+      if (!chip) return;
+      const card = chip.closest('.lc');
+      setField(card, 'date', chip.dataset.schedDate);
+    });
+    window.addEventListener('kat-schedule', () => {
+      document.querySelectorAll('.lc[data-key]').forEach(card => {
+        if (REMINDER[card.dataset.key]) syncFromSchedule(card);
+      });
+    });
+
+    async function handleReminder(btn, card, key, action) {
+      const msg = buildReminder(key);
+      const missing = card.querySelector('.lc-remind-missing');
+      const preview = card.querySelector('.lc-remind-preview');
+      if (!msg) {
+        missing.classList.add('show');
+        setTimeout(() => missing.classList.remove('show'), 2500);
+        return;
+      }
+      if (action === 'remind-preview') {
+        preview.textContent = msg;
+        preview.classList.toggle('show');
+        return;
+      }
+      if (await copyText(msg)) {
+        btn.classList.add('copied');
+        const originalText = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        showToast('✓ Class reminder copied');
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = originalText; }, 1600);
+      } else {
+        showToast("Couldn't copy — long-press the preview to copy manually");
+        preview.textContent = msg;
+        preview.classList.add('show');
+      }
+    }
+
     // ── Copy & preview ──
     const toast = document.getElementById('toast');
     let toastTimer = null;
@@ -1373,6 +1599,10 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
       const card = btn.closest('.lc');
       const key = card.dataset.key;
       const action = btn.dataset.action;
+      if (action === 'remind-copy' || action === 'remind-preview') {
+        handleReminder(btn, card, key, action);
+        return;
+      }
       const msg = buildMessage(key);
       const missing = card.querySelector('.lc-missing');
       const preview = card.querySelector('.lc-preview');
@@ -1452,6 +1682,15 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    // Public class schedule (readable by anyone) for the Copy Class Reminder tools above.
+    onSnapshot(query(collection(db, 'classes'), orderBy('date1')),
+      snap => {
+        window.KAT_SCHEDULE = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        window.dispatchEvent(new Event('kat-schedule'));
+      },
+      () => {}   // reminders still work from a typed date/time if the schedule can't load
+    );
 
     const $ = id => document.getElementById(id);
     const signinCard = $('signinCard'), noAccessCard = $('noAccessCard'),

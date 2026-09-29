@@ -12,7 +12,8 @@
       "**/.*",
       "**/.*/**",
       "**/node_modules/**",
-      "**/*.md"
+      "**/*.md",
+      "tests/**"
     ],
     "cleanUrls": true,
     "trailingSlash": false,

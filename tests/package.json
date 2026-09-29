@@ -1,0 +1,11 @@
+{
+  "name": "kat-cci-website-tests",
+  "private": true,
+  "description": "Browser tests for the KAT CCI site. Not deployed (excluded in firebase.json).",
+  "scripts": {
+    "test": "node run-all.js"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0"
+  }
+}

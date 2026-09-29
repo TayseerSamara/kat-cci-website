@@ -32,7 +32,8 @@ const seed = {
   classes: {
     c1: { type: 'ccl', date1: isoInDays(9), date2: isoInDays(10), endDate: isoInDays(10), time: '09:00', price: 175, createdAt: ts(12), updatedAt: ts(12) },
     c2: { type: 'renewal', date1: isoInDays(16), date2: '', endDate: isoInDays(16), time: '18:00', price: 125, createdAt: ts(8), updatedAt: ts(8) },
-    c3: { type: 'womens', date1: isoInDays(-5), date2: '', endDate: isoInDays(-5), time: '10:00', price: 125, createdAt: ts(30), updatedAt: ts(30) }
+    c3: { type: 'womens', date1: isoInDays(-5), date2: '', endDate: isoInDays(-5), time: '10:00', price: 125, createdAt: ts(30), updatedAt: ts(30) },
+    c4: { type: 'womens', date1: isoInDays(20), date2: '', endDate: isoInDays(20), time: '12:00', price: 125, createdAt: ts(2), updatedAt: ts(2) }
   },
   students: {
     s1: { name: 'Jordan Rivera', phone: '312-555-0101', email: 'jordan.rivera@example.com', classType: 'womens', classDate: isoInDays(-5), paid: 'paid', payMethod: 'Card', waiver: true, notes: '', source: 'manual', createdAt: ts(20), updatedAt: ts(20) },
