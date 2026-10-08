@@ -9,7 +9,7 @@ const SITE = process.env.SITE || 'http://localhost:5058';
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const ID = 'AW-18439430263';
 const LOADER = `https://www.googletagmanager.com/gtag/js?id=${ID}`;
-const PAGES = { 'index.html': '/', 'reserve.html': '/reserve?c=ccl16&to=' + encodeURIComponent('https://buy.stripe.com/14A5kDf6g3MXdJ28llak000'), 'pay.html': '/pay', 'terms.html': '/terms', 'text.html': '/text' };
+const PAGES = { 'confirmed.html': '/confirmed?session_id=cs_test_a1B2c3', 'index.html': '/', 'reserve.html': '/reserve?c=ccl16&to=' + encodeURIComponent('https://buy.stripe.com/14A5kDf6g3MXdJ28llak000'), 'pay.html': '/pay', 'terms.html': '/terms', 'text.html': '/text' };
 const count = (s, needle) => s.split(needle).length - 1;
 let fails = 0;
 const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails++; };
@@ -26,6 +26,7 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
     ok(count(s, `gtag('config', '${ID}')`) === 1 && count(s, "gtag('js', new Date())") === 1, `${f}: tag configured exactly once`);
     ok(/<head>\n  <!-- Google tag \(gtag\.js\) -->\n  <script async src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=AW-18439430263"><\/script>/.test(s), `${f}: placed immediately after <head>`);
     ok(!/GTM-[A-Z0-9]+|\bG-[A-Z0-9]{6,}|\bUA-\d|AW-(?!18439430263)\d+|google-analytics\.com\/analytics\.js/.test(s), `${f}: no other Google tag / Analytics / Tag Manager IDs`);
+    ok(!/gtag\(\s*['"]event['"]|send_to/.test(s), `${f}: no conversion event (base tag only)`);
   }
 
   console.log('Runtime check (' + SITE + ')');
