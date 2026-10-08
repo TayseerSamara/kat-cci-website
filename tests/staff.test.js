@@ -1,6 +1,7 @@
 // Staff page (/pay) tests, run in demo mode (?demo) so nothing touches Firebase.
 // SITE = base URL (default http://localhost:5058). Demo mode only runs on localhost / preview hosts.
 const { chromium } = require('playwright-core');
+const { stubGoogle } = require('./google-stub');
 const path = require('path');
 
 const SITE = process.env.SITE || 'http://localhost:5058';
@@ -133,6 +134,7 @@ const NO_PAY = /stripe|https?:|\/reserve|payment|pay by|complete pay|\$(175|160|
 
   async function openPage(url, viewport = { width: 420, height: 900 }) {
     const ctx = await browser.newContext({ viewport, permissions: ['clipboard-read', 'clipboard-write'] });
+    await stubGoogle(ctx);
     const page = await ctx.newPage();
     const log = { firebase: [], errors: [], demoJs: false };
     page.on('request', r => { if (FIREBASE_HOSTS.test(r.url())) log.firebase.push(r.url()); if (r.url().includes('pay-demo.js')) log.demoJs = true; });

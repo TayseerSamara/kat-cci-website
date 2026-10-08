@@ -2,6 +2,7 @@
 // SITE = base URL. Stripe navigation is intercepted: no checkout page is loaded and nothing is paid.
 // REAL_PROMOS=1 uses the Stripe links exactly as configured in promos.js (default); REAL_PROMOS=0 swaps in stand-ins.
 const { chromium } = require('playwright-core');
+const { stubGoogle } = require('./google-stub');
 
 const BASE = process.env.SITE || 'http://localhost:5058';
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -19,6 +20,7 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   const browser = await chromium.launch({ executablePath: CHROME, headless: true });
   async function ctxWith({ links = true, at = '2026-09-24T12:00:00-05:00', viewport = { width: 400, height: 860 } } = {}) {
     const ctx = await browser.newContext({ viewport });
+    await stubGoogle(ctx);
     const state = { stripe: [], errors: [] };
     await ctx.route(/Firestore\/Write|formspree\.io/, r => r.abort());
     if (!links || !REAL_PROMOS) {

@@ -2,6 +2,7 @@
 // Real homepage schedule is used where it has classes; stand-in class records (TEST*) cover the rest.
 // Stripe navigation is intercepted: no checkout page is loaded and nothing is paid.
 const { chromium } = require('playwright-core');
+const { stubGoogle } = require('./google-stub');
 
 const BASE = process.env.SITE || 'http://localhost:5058';
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -31,6 +32,7 @@ const STANDINS = {
   const browser = await chromium.launch({ executablePath: CHROME, headless: true });
   async function ctxWith(viewport = { width: 400, height: 860 }) {
     const ctx = await browser.newContext({ viewport });
+    await stubGoogle(ctx);
     const state = { stripe: [], errors: [] };
     await ctx.addInitScript(() => { try { sessionStorage.setItem('katcci_promo_seen', '1'); } catch (e) {} });   // keep the promo popup out of the way
     await ctx.route(/Firestore\/Write|formspree\.io/, r => r.abort());

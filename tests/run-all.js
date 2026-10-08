@@ -12,7 +12,7 @@ const run = (file, env) => new Promise(resolve => {
   const server = site ? null : await start(5058);
   const base = site || 'http://localhost:5058';
   let failed = 0;
-  for (const suite of ['staff.test.js', 'promo.test.js', 'booking.test.js']) {
+  for (const suite of ['gtag.test.js', 'staff.test.js', 'promo.test.js', 'booking.test.js']) {
     console.log('\n######## ' + suite + '  (' + base + ')');
     if (await run(__dirname + '/' + suite, { ...process.env, SITE: base }) !== 0) failed++;
   }
