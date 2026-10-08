@@ -177,5 +177,36 @@
     <a href="/terms">Terms</a> · <a href="/">Home</a>
   </footer>
 
+  <script>
+    // Google Ads "KAT CCI Paid Class Registration" conversion. Fires only after a real Stripe
+    // checkout: Stripe returns with ?session_id={CHECKOUT_SESSION_ID}, and /reserve stored the
+    // trusted amount just before sending the customer to Stripe. The session id is the
+    // transaction_id; each session id is reported at most once from this browser.
+    (function () {
+      var PENDING = 'katcci_pending_purchase', SENT = 'katcci_conversions_sent';
+      var APPROVED_VALUES = [175, 125, 160, 100];
+      var MAX_AGE = 6 * 60 * 60 * 1000;   // a pending purchase older than 6 hours is ignored
+      var sessionId = new URLSearchParams(window.location.search).get('session_id') || '';
+      if (!/^cs_(live|test)_[A-Za-z0-9]{10,}$/.test(sessionId)) return;
+      try {
+        var sent = JSON.parse(localStorage.getItem(SENT) || '[]');
+        if (!Array.isArray(sent)) sent = [];
+        if (sent.indexOf(sessionId) !== -1) return;   // refresh / revisit: already reported
+        var pending = JSON.parse(localStorage.getItem(PENDING) || 'null');
+        if (!pending || APPROVED_VALUES.indexOf(pending.value) === -1 || pending.currency !== 'USD' ||
+            !(Date.now() - pending.at < MAX_AGE)) return;
+        gtag('event', 'conversion', {
+          'send_to': 'AW-18439430263/A1y-CLvYk5UdEPfAzdhE',
+          'value': pending.value,
+          'currency': 'USD',
+          'transaction_id': sessionId
+        });
+        sent.push(sessionId);
+        localStorage.setItem(SENT, JSON.stringify(sent.slice(-20)));
+        localStorage.removeItem(PENDING);
+      } catch (e) {}
+    })();
+  </script>
+
 </body>
 </html>

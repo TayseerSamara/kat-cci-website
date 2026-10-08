@@ -450,8 +450,26 @@
           });
         });
 
+        // Pending purchase for the Google Ads conversion on /confirmed. The amount comes only from
+        // the site's trusted tables (promos.js / booking.js), never from the URL; only the approved
+        // KAT CCI checkout values are recorded.
+        function rememberPendingPurchase() {
+          var value = null, kind = '';
+          if (promo) { value = promo.price; kind = 'promo:' + promo.id; }
+          else if (booked) { value = window.KAT_BOOKING.entryFor(booked).price; kind = 'class:' + c; }
+          else if (window.KAT_BOOKING) { value = window.KAT_BOOKING.regularPriceFor(c, to); kind = 'link:' + c; }
+          try {
+            if ([175, 125, 160, 100].indexOf(value) !== -1) {
+              localStorage.setItem('katcci_pending_purchase', JSON.stringify({ value: value, currency: 'USD', kind: kind, at: Date.now() }));
+            } else {
+              localStorage.removeItem('katcci_pending_purchase');
+            }
+          } catch (e) {}
+        }
+
         continueBtn.addEventListener('click', function () {
           if (checks.every(function (ch) { return ch.checked; })) {
+            rememberPendingPurchase();
             window.location.href = to;
           }
         });

@@ -21,12 +21,17 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   ok(JSON.stringify(htmlFiles) === JSON.stringify(Object.keys(PAGES).sort()), 'every site page is covered: ' + htmlFiles.join(', '));
   for (const f of Object.keys(PAGES)) {
     const s = fs.readFileSync(path.join(root, f), 'utf8');
-    ok(count(s, ID) === 2, `${f}: ${ID} present (loader + config)`);
+    ok(count(s, ID) === (f === 'confirmed.html' ? 3 : 2), `${f}: ${ID} present (loader + config${f === 'confirmed.html' ? ' + conversion send_to' : ''})`);
     ok(count(s, 'gtag/js') === 1 && count(s, LOADER) === 1, `${f}: exactly one gtag.js loader`);
     ok(count(s, `gtag('config', '${ID}')`) === 1 && count(s, "gtag('js', new Date())") === 1, `${f}: tag configured exactly once`);
     ok(/<head>\n  <!-- Google tag \(gtag\.js\) -->\n  <script async src="https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=AW-18439430263"><\/script>/.test(s), `${f}: placed immediately after <head>`);
     ok(!/GTM-[A-Z0-9]+|\bG-[A-Z0-9]{6,}|\bUA-\d|AW-(?!18439430263)\d+|google-analytics\.com\/analytics\.js/.test(s), `${f}: no other Google tag / Analytics / Tag Manager IDs`);
-    ok(!/gtag\(\s*['"]event['"]|send_to/.test(s), `${f}: no conversion event (base tag only)`);
+    if (f === 'confirmed.html') {
+      ok(count(s, "gtag('event'") === 1 && count(s, "gtag('event', 'conversion'") === 1 && count(s, "'send_to': 'AW-18439430263/A1y-CLvYk5UdEPfAzdhE'") === 1,
+         `${f}: exactly one conversion call, to AW-18439430263/A1y-CLvYk5UdEPfAzdhE`);
+    } else {
+      ok(!/gtag\(\s*['"]event['"]|send_to/.test(s), `${f}: no conversion event on this page`);
+    }
   }
 
   console.log('Runtime check (' + SITE + ')');

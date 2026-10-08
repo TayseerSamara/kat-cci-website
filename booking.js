@@ -89,7 +89,19 @@
     return window.KAT_PROMOS.checkoutUrl({ id: 'class-' + cls.id, checkoutUrl: e.checkoutUrl }, attr);
   }
 
+  // Regular price for a staff-texted link, only when its Stripe link is exactly the approved
+  // regular checkout for that class (query string ignored). Otherwise null.
+  function regularPriceFor(classKey, url) {
+    var base;
+    try { var u = new URL(url); base = u.origin + u.pathname; } catch (e) { return null; }
+    for (var t in REGULAR) {
+      if (REGULAR[t].classKey === classKey && REGULAR[t].checkoutUrl === base) return REGULAR[t].price;
+    }
+    return null;
+  }
+
   window.KAT_BOOKING = {
+    regularPriceFor: regularPriceFor,
     entryFor: entryFor,
     isBookable: isBookable,
     reserveUrl: reserveUrl,
