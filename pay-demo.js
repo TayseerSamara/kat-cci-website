@@ -56,8 +56,9 @@ const seed = {
           requestedAt: ts(40), requestedBy: 'tony@midwayspeedpark.com', studentId: null, linked: 'manual', status: 'opened_email' }
   },
   settings: FRESH ? {} : {
-    pricing: { ccl16: 175, renewal3: 125, womens: 125, privateFrom: 250, updatedAt: ts(5), updatedBy: 'nora@katcci.com' },
-    publicPricing: { privateFrom: 250 },
+    pricing: { ccl16: 175, renewal3: 125, womens: 125, privateFrom: 250,
+               ccl16Stripe: 175, renewal3Stripe: 125, womensStripe: 125, updatedAt: ts(5), updatedBy: 'nora@katcci.com' },
+    publicPricing: { privateFrom: 250, ccl16: 175, renewal3: 125, womens: 125 },
     reviews: {
       googleReviewUrl: 'https://g.page/r/DEMO-ONLY/review',
       defaultMessage: 'Hello, thank you for training with KAT CCI! If you have a minute, we would really appreciate a quick Google review. It helps other students find us:\n\n{link}\n\n— Kat CCI',

@@ -18,7 +18,11 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
 
 const iso = n => { const d = new Date(Date.now() + n * 86400000); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const dayName = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }); };
-const doc = f => ({ name: 'x', fields: Object.fromEntries(Object.entries(f).map(([k, v]) => [k, typeof v === 'number' ? { integerValue: String(v) } : { stringValue: v }])) });
+const doc = f => ({ name: 'x', fields: Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v === null ? { nullValue: null } : typeof v === 'number' ? (Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v }) : { stringValue: v }])) });
+// settings/publicPricing stand-in (production gets the regular fields once Class Pricing is saved
+// with confirmed Stripe amounts). PUB.current = what the site reads; null → HTTP 500.
+const PUB_MATCHED = { privateFrom: 200, ccl16: 175, renewal3: 125, womens: 125 };
+const PUB = { current: PUB_MATCHED };
 const STANDINS = {
   TESTccl: { type: 'ccl', date1: iso(12), date2: iso(13), endDate: iso(13), time: '09:30', price: 175 },
   TESTrenewal: { type: 'renewal', date1: iso(15), date2: '', endDate: iso(15), time: '18:00', price: 125 },
@@ -40,6 +44,8 @@ const STANDINS = {
       const id = new URL(r.request().url()).pathname.split('/').pop();
       STANDINS[id] ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(doc(STANDINS[id])) }) : r.fulfill({ status: 404, body: '{}' });
     });
+    await ctx.route(/firestore\.googleapis\.com\/v1\/projects\/katcci\/databases\/\(default\)\/documents\/settings\/publicPricing/, r =>
+      PUB.current ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(doc(PUB.current)) }) : r.fulfill({ status: 500, body: '{}' }));
     await ctx.route(/^https:\/\/(buy|checkout)\.stripe\.com\//, r => { state.stripe.push(r.request().url()); r.fulfill({ status: 200, contentType: 'text/html', body: '<title>stripe stand-in</title>' }); });
     const page = await ctx.newPage();
     page.on('pageerror', e => state.errors.push(e.message));
@@ -131,6 +137,56 @@ const STANDINS = {
   ok(!state.stripe.some(x => PROMO_LINKS.some(p => x.startsWith(p))), 'regular flow never used a promotional checkout link');
   ok(state.errors.length === 0, 'no JavaScript errors ' + state.errors.join(' | '));
   await ctx.close();
+
+  // Website price ≠ confirmed Stripe amount → public price null → online booking paused
+  console.log('Price mismatch pauses online booking');
+  PUB.current = { ...PUB_MATCHED, ccl16: null };
+  ({ ctx, page, state } = await ctxWith());
+  await page.goto(BASE + '/');
+  await page.waitForFunction(() => document.querySelectorAll('#upcomingGrid .uc-card[data-dynamic]').length > 0, null, { timeout: 20000 });
+  let cs = await page.$$eval('#upcomingGrid .uc-card[data-dynamic]', els => els.map(e => ({ text: e.innerText.replace(/\s+/g, ' '), link: !!e.querySelector('a.btn-reserve'), textBtn: !!e.querySelector('button[data-sms]') })));
+  let c17 = cs.find(c => /Oct 17/.test(c.text)), c24 = cs.find(c => /Oct 24/.test(c.text));
+  ok(c17 && !c17.link && c17.textBtn, 'CCL card falls back to "Text to Reserve" while CCL is paused');
+  ok(c24 && c24.link, "Women's (still matched) keeps \"Reserve Your Spot\"");
+  await page.goto(BASE + '/reserve?class=TESTccl');
+  await page.waitForSelector('#errorFlow:not([style*="none"])', { timeout: 15000 }).catch(() => {});
+  ok(/isn't available for online booking/.test(await page.textContent('#errorFlow')) && !(await page.isVisible('#ackFlow')), '/reserve refuses the $175 CCL class while paused');
+  await page.goto(BASE + '/reserve?class=TESTrenewal');
+  sum = await summary(page);
+  ok(/Price \$125/.test(sum), 'other classes unaffected (Renewal still $125)');
+  await ctx.close();
+
+  // Nora confirms Stripe now charges $185 and saves → public ccl16 185
+  console.log('New confirmed price ($185) resumes online booking');
+  PUB.current = { ...PUB_MATCHED, ccl16: 185 };
+  ({ ctx, page, state } = await ctxWith());
+  await page.goto(BASE + '/');
+  await page.waitForFunction(() => document.querySelectorAll('#upcomingGrid .uc-card[data-dynamic]').length > 0, null, { timeout: 20000 });
+  cs = await page.$$eval('#upcomingGrid .uc-card[data-dynamic]', els => els.map(e => ({ text: e.innerText.replace(/\s+/g, ' '), link: !!e.querySelector('a.btn-reserve') })));
+  c17 = cs.find(c => /Oct 17/.test(c.text));
+  ok(c17 && !c17.link, 'scheduled class still listed at $175 is not bookable online at $185 (Nora updates its price)');
+  await page.goto(BASE + '/reserve?class=TESTmismatch');
+  sum = await summary(page);
+  ok(/Price \$185/.test(sum) && /Continue to Secure Payment · \$185/.test(await page.textContent('#continueBtn')), '$185 class now books online at $185');
+  u = await pay(page, state);
+  ok(u.origin + u.pathname === LINK.ccl, 'same fixed CCL Stripe link used (URL never changes)');
+  await page.goto(BASE + '/terms');   // read site storage from a site page, not the Stripe stand-in
+  const pend = await page.evaluate(() => JSON.parse(localStorage.getItem('katcci_pending_purchase') || 'null'));
+  ok(pend && pend.value === 185 && pend.kind === 'class:ccl16', 'pending conversion value is the confirmed $185');
+  await page.goto(BASE + '/reserve?class=TESTccl');
+  await page.waitForSelector('#errorFlow:not([style*="none"])', { timeout: 15000 }).catch(() => {});
+  ok(/isn't available for online booking/.test(await page.textContent('#errorFlow')), 'a class still listed at $175 is refused');
+  await ctx.close();
+
+  // Public pricing unreadable → no regular online booking (fail closed)
+  console.log('Public pricing unavailable');
+  PUB.current = null;
+  ({ ctx, page, state } = await ctxWith());
+  await page.goto(BASE + '/reserve?class=TESTrenewal');
+  await page.waitForSelector('#errorFlow:not([style*="none"])', { timeout: 15000 }).catch(() => {});
+  ok(/isn't available for online booking/.test(await page.textContent('#errorFlow')) && !(await page.isVisible('#ackFlow')), 'refused when settings/publicPricing cannot be read');
+  await ctx.close();
+  PUB.current = PUB_MATCHED;
 
   // Desktop layout sanity
   ({ ctx, page, state } = await ctxWith({ width: 1280, height: 900 }));

@@ -159,6 +159,7 @@ const NO_PAY = /stripe|https?:|\/reserve|payment|pay by|complete pay|\$(175|160|
   console.log('Demo mode (seeded)');
   let { page, log, ctx } = await openPage(BASE + '?demo');
   ok(await page.waitForSelector('text=DEMO MODE', { timeout: 10000 }).then(() => true, () => false), 'demo banner shown');
+  await page.waitForFunction(() => window.KAT_PUBLIC_PRICING !== undefined, null, { timeout: 10000 });   // current regular prices loaded
 
   // ── Copy Class Reminder (payment helper cards work without signing in) ──
   ok((await page.$$('[data-action="remind-copy"]')).length === 4 && !(await page.$(card('test') + ' [data-action="remind-copy"]')), "Copy Class Reminder on the CCL, Renewal, Women's and Private cards (not the $5 test card)");

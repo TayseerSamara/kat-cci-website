@@ -1,16 +1,17 @@
 // Regular (non-promotional) online booking for scheduled classes.
 // Homepage class cards link to /reserve?class=<scheduled class id>. The reserve page loads that
-// class record (date, time, type) from the public schedule, and takes the price and Stripe checkout
-// ONLY from the table below — never from the URL. Promotional offers live in promos.js and are separate.
-// Needs promos.js loaded first (shared ad-attribution handling).
+// class record (date, time, type) from the public schedule. The Stripe checkout URL comes ONLY from
+// the table below — never from the URL or Firestore. The price comes from settings/publicPricing,
+// which publishes a regular price only when the saved website price equals the Stripe amount an
+// editor has confirmed in Class Pricing (enforced by the Firestore rules). Promotions live in
+// promos.js and are separate. Needs promos.js loaded first for checkoutUrl (ad attribution).
 (function () {
-  // Trusted regular prices and approved Stripe Payment Links, keyed by schedule class type.
+  // Trusted approved Stripe Payment Links (fixed), keyed by schedule class type.
   // Keep in step with the staff page's DEFAULT_LINKS (pay.html) — the same approved links.
   var REGULAR = {
     ccl: {
-      classKey: 'ccl16',                    // /reserve acknowledgments
+      classKey: 'ccl16',                    // /reserve acknowledgments + pricing field
       title: '16-Hour CCL Certification',
-      price: 175,
       checkoutUrl: 'https://buy.stripe.com/14A5kDf6g3MXdJ28llak000',
       paired: true,
       info: ['+ $150 Illinois state fee, paid separately to ISP',
@@ -21,7 +22,6 @@
     renewal: {
       classKey: 'renewal3',
       title: '3-Hour CCL Renewal',
-      price: 125,
       checkoutUrl: 'https://buy.stripe.com/6oU7sLgakcjt34ocBBak002',
       paired: false,
       info: ['+ $150 Illinois state renewal fee, paid separately to ISP',
@@ -32,7 +32,6 @@
     womens: {
       classKey: 'womens',
       title: "Women's Class",
-      price: 125,
       checkoutUrl: 'https://buy.stripe.com/eVqdR92ju6Z934odFFak001',
       paired: false,
       info: ['Course materials and eye & ear protection included']
@@ -41,21 +40,62 @@
 
   var PROJECT = 'katcci';
   var API_KEY = 'AIzaSyCSZwkehqzmMChhaW93uPScZ3GCIjqnO2E';   // public web key (same as the site's Firebase config)
+  var DOCS = 'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents/';
 
   function chicagoToday() {
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
   }
 
-  // Online booking is offered only when the scheduled class's listed price matches the
-  // trusted checkout price, so a customer is never charged a different amount than advertised.
-  function entryFor(cls) {
-    var e = cls && REGULAR[cls.type];
-    if (!e || Number(cls.price) !== e.price) return null;
-    return e;
+  // A usable price: positive, at most 2 decimals, below 100,000.
+  function validPrice(v) {
+    return typeof v === 'number' && isFinite(v) && v > 0 && v < 100000 && Math.abs(Math.round(v * 100) - v * 100) < 1e-9;
   }
 
-  function isBookable(cls) {
-    return !!entryFor(cls) && !!cls.date1 && (cls.endDate || cls.date1) >= chicagoToday();
+  function fieldValue(v) {
+    if (!v) return undefined;
+    if (v.nullValue !== undefined) return null;
+    if (v.stringValue != null) return v.stringValue;
+    if (v.integerValue != null) return Number(v.integerValue);
+    if (v.doubleValue != null) return v.doubleValue;
+    return undefined;
+  }
+
+  // Public pricing: { privateFrom, ccl16, renewal3, womens } — a regular value is present only when
+  // that class can be booked online at that price; null means online booking is paused.
+  var publicPricingPromise = null;
+  function loadPublicPricing() {
+    if (!publicPricingPromise) {
+      publicPricingPromise = fetch(DOCS + 'settings/publicPricing?key=' + API_KEY)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (doc) {
+          if (!doc || !doc.fields) return null;
+          var out = {};
+          ['privateFrom', 'ccl16', 'renewal3', 'womens'].forEach(function (k) { out[k] = fieldValue(doc.fields[k]); });
+          return out;
+        })
+        .catch(function () { return null; });
+    }
+    return publicPricingPromise;
+  }
+
+  // Current online-bookable price for a class type, or null when booking is paused.
+  function bookablePrice(type, pub) {
+    var e = REGULAR[type];
+    var v = e && pub ? pub[e.classKey] : null;
+    return validPrice(v) ? v : null;
+  }
+
+  // Online booking only when the scheduled class's listed price equals the current bookable price,
+  // so a customer is never charged a different amount than advertised.
+  function entryFor(cls, pub) {
+    var e = cls && REGULAR[cls.type];
+    var price = cls ? bookablePrice(cls.type, pub) : null;
+    if (!e || price == null || Number(cls.price) !== price) return null;
+    return { classKey: e.classKey, title: e.title, checkoutUrl: e.checkoutUrl, paired: e.paired, info: e.info, price: price };
+  }
+
+  function isBookable(cls, pub) {
+    return !!entryFor(cls, pub) && !!cls.date1 && (cls.endDate || cls.date1) >= chicagoToday();
   }
 
   function validId(id) { return typeof id === 'string' && /^[A-Za-z0-9]{1,64}$/.test(id); }
@@ -70,61 +110,62 @@
   // Read one scheduled class from the public schedule (Firestore REST, read-only).
   function loadClass(id) {
     if (!validId(id)) return Promise.resolve(null);
-    var url = 'https://firestore.googleapis.com/v1/projects/' + PROJECT +
-      '/databases/(default)/documents/classes/' + encodeURIComponent(id) + '?key=' + API_KEY;
-    return fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (doc) {
-      if (!doc || !doc.fields) return null;
-      var f = doc.fields, out = { id: id };
-      ['type', 'date1', 'date2', 'endDate', 'time', 'price'].forEach(function (k) {
-        var v = f[k];
-        if (v) out[k] = v.stringValue != null ? v.stringValue : v.integerValue != null ? Number(v.integerValue) : v.doubleValue;
-      });
-      return out;
-    }).catch(function () { return null; });
+    return fetch(DOCS + 'classes/' + encodeURIComponent(id) + '?key=' + API_KEY)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (doc) {
+        if (!doc || !doc.fields) return null;
+        var out = { id: id };
+        ['type', 'date1', 'date2', 'endDate', 'time', 'price'].forEach(function (k) {
+          var v = fieldValue(doc.fields[k]);
+          if (v != null) out[k] = v;
+        });
+        return out;
+      }).catch(function () { return null; });
   }
 
   // Stripe link from the trusted table, plus utm_* and a client_reference_id — same method as promos.
-  function checkoutUrl(cls, attr) {
-    var e = entryFor(cls);
+  function checkoutUrl(cls, pub, attr) {
+    var e = entryFor(cls, pub);
     return window.KAT_PROMOS.checkoutUrl({ id: 'class-' + cls.id, checkoutUrl: e.checkoutUrl }, attr);
   }
 
-  // Regular price for a staff-texted link, only when its Stripe link is exactly the approved
-  // regular checkout for that class (query string ignored). Otherwise null.
-  function regularPriceFor(classKey, url) {
+  // Price for a staff-texted link, only when its Stripe link is exactly the approved regular checkout
+  // for that class (query string ignored) and that class is currently bookable. Otherwise null.
+  function regularPriceFor(classKey, url, pub) {
     var base;
     try { var u = new URL(url); base = u.origin + u.pathname; } catch (e) { return null; }
     for (var t in REGULAR) {
-      if (REGULAR[t].classKey === classKey && REGULAR[t].checkoutUrl === base) return REGULAR[t].price;
+      if (REGULAR[t].classKey === classKey && REGULAR[t].checkoutUrl === base) return bookablePrice(t, pub);
     }
     return null;
   }
 
-  // Approved regular checkouts per schedule class type: { ccl: { price, checkoutUrl, title }, ... }.
-  // Used by the staff Class Pricing view to compare website prices with what Stripe charges.
-  function approvedCheckouts() {
+  // Approved regular checkouts per schedule class type: { ccl: { classKey, checkoutUrl, title }, ... }.
+  // URLs only — amounts are confirmed by editors in Class Pricing.
+  function regularCheckouts() {
     var out = {};
     Object.keys(REGULAR).forEach(function (t) {
-      out[t] = { price: REGULAR[t].price, checkoutUrl: REGULAR[t].checkoutUrl, title: REGULAR[t].title };
+      out[t] = { classKey: REGULAR[t].classKey, checkoutUrl: REGULAR[t].checkoutUrl, title: REGULAR[t].title };
     });
     return out;
   }
 
-  // Homepage Private card "From $___". Reads only privateFrom from the public settings/publicPricing
-  // document (no Stripe links or other settings there). Anything missing/invalid shows the $250 fallback.
+  // Homepage Private card "From $___" from settings/publicPricing.privateFrom. Missing/invalid → $250.
   var PRIVATE_FROM_FALLBACK = 250;
   function showPrivateFrom(data) {
     var el = document.getElementById('ucPrivatePrice');
     if (!el) return;
     var v = data && data.privateFrom;
-    var valid = typeof v === 'number' && isFinite(v) && v > 0 && v < 100000 && Math.abs(Math.round(v * 100) - v * 100) < 1e-9;
-    var n = valid ? v : PRIVATE_FROM_FALLBACK;
+    var n = validPrice(v) ? v : PRIVATE_FROM_FALLBACK;
     el.textContent = 'From $' + (Number.isInteger(n) ? n : n.toFixed(2));
   }
 
   window.KAT_BOOKING = {
+    loadPublicPricing: loadPublicPricing,
+    bookablePrice: bookablePrice,
+    validPrice: validPrice,
     showPrivateFrom: showPrivateFrom,
-    approvedCheckouts: approvedCheckouts,
+    regularCheckouts: regularCheckouts,
     regularPriceFor: regularPriceFor,
     entryFor: entryFor,
     isBookable: isBookable,

@@ -2620,7 +2620,7 @@ header {
   <!-- ═══════════════ LIVE CLASS SCHEDULE (Firestore) ═══════════════ -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc }
+    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp }
       from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
     const firebaseConfig = {
@@ -2739,7 +2739,7 @@ header {
     // from booking.js, never the URL. Falls back to texting if the class can't be booked online.
     function reserveButton(c, sms, t) {
       const B = window.KAT_BOOKING, P = window.KAT_PROMOS;
-      if (B && P && c.id && B.isBookable(c)) {
+      if (B && P && c.id && B.isBookable(c, publicPricing)) {
         return '<a class="btn-sms btn-reserve" href="' + esc(B.reserveUrl(c.id, P.readAttribution())) + '">Reserve Your Spot →</a>';
       }
       return '<button class="btn-sms" data-sms="' + esc(sms) + '" data-classlabel="' + esc(t.formLabel || '') + '">💬 Text to Reserve</button>';
@@ -2808,19 +2808,27 @@ header {
       if (btn && typeof openReserve === 'function') openReserve(btn.dataset.sms, btn.dataset.classlabel || '');
     });
 
-    // Private card "From $___" — public settings/publicPricing (privateFrom only); keeps $250 if unavailable.
-    try {
-      onSnapshot(doc(db, 'settings', 'publicPricing'),
-        snap => { if (window.KAT_BOOKING) window.KAT_BOOKING.showPrivateFrom(snap.exists() ? snap.data() : null); },
-        () => {}   // not readable / missing → the $250 already on the card stays
-      );
-    } catch (e) {}
+    // Public pricing (settings/publicPricing): the Private "From $___" price and, per regular class
+    // type, the price it can currently be booked online at (null = online booking paused). Class cards
+    // render once both the schedule and the pricing are in; if pricing can't be loaded, cards fall back
+    // to "Text to Reserve" and the Private card keeps $250.
+    let publicPricing = null, latestClasses = null, pricingSettled = false;
+    function renderWhenReady() { if (latestClasses && pricingSettled) render(latestClasses); }
+    (window.KAT_BOOKING ? Promise.race([
+      window.KAT_BOOKING.loadPublicPricing(),
+      new Promise(resolve => setTimeout(() => resolve(null), 6000))
+    ]) : Promise.resolve(null)).then(p => {
+      publicPricing = p;
+      pricingSettled = true;
+      if (window.KAT_BOOKING) window.KAT_BOOKING.showPrivateFrom(p);
+      renderWhenReady();
+    });
 
     try {
       const q = query(collection(db, 'classes'), orderBy('date1'));
       onSnapshot(q,
-        snap => render(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-        err => { console.error('Schedule load failed:', err); render([]); }
+        snap => { latestClasses = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderWhenReady(); },
+        err => { console.error('Schedule load failed:', err); latestClasses = []; pricingSettled = true; render([]); }
       );
     } catch (e) {
       console.error('Schedule load failed:', e);

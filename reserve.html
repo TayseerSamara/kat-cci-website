@@ -299,13 +299,20 @@
       // Scheduled class (regular online booking): the class record comes from the public schedule;
       // the price and Stripe checkout come only from booking.js. URL values such as to=, c= or a
       // price are ignored on this path.
+      // Current public pricing (settings/publicPricing): the online-bookable regular prices.
+      var pubPricing = null;
+      var pubPricingLoad = window.KAT_BOOKING
+        ? window.KAT_BOOKING.loadPublicPricing().then(function (p) { pubPricing = p; return p; })
+        : Promise.resolve(null);
+
       var classId = promoId ? null : params.get('class');
       var booked = null;
       if (classId) {
         document.getElementById('heading').textContent = 'Loading class details…';
         var B = window.KAT_BOOKING;
-        (B ? B.loadClass(classId) : Promise.resolve(null)).then(function (cls) {
-          if (!cls || !B.isBookable(cls)) {
+        (B ? Promise.all([B.loadClass(classId), pubPricingLoad]) : Promise.resolve([null, null])).then(function (r) {
+          var cls = r[0], pub = r[1];
+          if (!cls || !B.isBookable(cls, pub)) {
             document.getElementById('ackFlow').style.display = 'none';
             var box = document.querySelector('#errorFlow .error-box');
             box.querySelector('h2').textContent = "This class isn't available for online booking";
@@ -315,8 +322,8 @@
             return;
           }
           booked = cls;
-          to = B.checkoutUrl(cls, window.KAT_PROMOS.readAttribution());
-          c = B.entryFor(cls).classKey;
+          to = B.checkoutUrl(cls, pub, window.KAT_PROMOS.readAttribution());
+          c = B.entryFor(cls, pub).classKey;
           start();
         });
         return;
@@ -400,7 +407,7 @@
         }
 
         if (booked) {
-          var entry = window.KAT_BOOKING.entryFor(booked);
+          var entry = window.KAT_BOOKING.entryFor(booked, pubPricing);
           var escB = function (t) {
             return String(t).replace(/[&<>"]/g, function (ch) {
               return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch];
@@ -450,16 +457,20 @@
           });
         });
 
-        // Pending purchase for the Google Ads conversion on /confirmed. The amount comes only from
-        // the site's trusted tables (promos.js / booking.js), never from the URL; only the approved
-        // KAT CCI checkout values are recorded.
+        // Pending purchase for the Google Ads conversion on /confirmed. The amount never comes from
+        // the URL: promotions use their fixed promos.js price ($160 / $100); regular classes use the
+        // current online-bookable price from settings/publicPricing (website price = confirmed Stripe
+        // amount). Staff-texted links count only when their Stripe link is the approved regular link.
+        var PROMO_VALUES = [160, 100];
         function rememberPendingPurchase() {
           var value = null, kind = '';
+          var B = window.KAT_BOOKING;
           if (promo) { value = promo.price; kind = 'promo:' + promo.id; }
-          else if (booked) { value = window.KAT_BOOKING.entryFor(booked).price; kind = 'class:' + c; }
-          else if (window.KAT_BOOKING) { value = window.KAT_BOOKING.regularPriceFor(c, to); kind = 'link:' + c; }
+          else if (booked) { value = B.entryFor(booked, pubPricing).price; kind = 'class:' + c; }
+          else if (B) { value = B.regularPriceFor(c, to, pubPricing); kind = 'link:' + c; }
+          var ok = promo ? PROMO_VALUES.indexOf(value) !== -1 : !!(B && B.validPrice(value));
           try {
-            if ([175, 125, 160, 100].indexOf(value) !== -1) {
+            if (ok) {
               localStorage.setItem('katcci_pending_purchase', JSON.stringify({ value: value, currency: 'USD', kind: kind, at: Date.now() }));
             } else {
               localStorage.removeItem('katcci_pending_purchase');
@@ -469,8 +480,14 @@
 
         continueBtn.addEventListener('click', function () {
           if (checks.every(function (ch) { return ch.checked; })) {
-            rememberPendingPurchase();
-            window.location.href = to;
+            // Staff-texted links: give public pricing a moment to load so the conversion value is known.
+            var ready = (promo || booked) ? Promise.resolve() :
+              Promise.race([pubPricingLoad, new Promise(function (r) { setTimeout(r, 3000); })]);
+            continueBtn.disabled = true;
+            ready.then(function () {
+              rememberPendingPurchase();
+              window.location.href = to;
+            });
           }
         });
       }

@@ -48,27 +48,49 @@ service cloud.firestore {
       allow read, write: if isEditor();
     }
 
-    // Regular class pricing (staff Class Pricing): editors only. Four positive prices, stamped
-    // with the saving editor. Checkout amounts/Stripe links are NOT stored here (they live in code).
+    // Class pricing (staff Class Pricing): editors only. Four positive website prices, plus for each
+    // fixed-price regular class the amount an editor confirmed its fixed Stripe Payment Link charges
+    // (*Stripe). Stamped with the saving editor. Stripe links are NOT stored here (they live in code).
     match /settings/pricing {
       allow read: if isEditor();
       allow create, update: if isEditor()
-        && request.resource.data.keys().hasOnly(['ccl16', 'renewal3', 'womens', 'privateFrom', 'updatedAt', 'updatedBy'])
+        && request.resource.data.keys().hasOnly(['ccl16', 'renewal3', 'womens', 'privateFrom',
+             'ccl16Stripe', 'renewal3Stripe', 'womensStripe', 'updatedAt', 'updatedBy'])
         && validPrice(request.resource.data.ccl16)
         && validPrice(request.resource.data.renewal3)
         && validPrice(request.resource.data.womens)
         && validPrice(request.resource.data.privateFrom)
+        && validPrice(request.resource.data.ccl16Stripe)
+        && validPrice(request.resource.data.renewal3Stripe)
+        && validPrice(request.resource.data.womensStripe)
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.token.email;
     }
 
-    // Public copy of the Private "From $___" price for the homepage. Anyone may read it; only
-    // editors may write it, and it may contain nothing but privateFrom.
+    // Public pricing for the website: the Private "From $___" price and, per regular class, the
+    // price it can be booked online at. Anyone may read it; only editors may write it, and only
+    // together with settings/pricing (same batch) so it always mirrors the saved pricing: a regular
+    // value equals the website price when that matches the confirmed Stripe amount, otherwise null.
     match /settings/publicPricing {
       allow read: if true;
       allow create, update: if isEditor()
-        && request.resource.data.keys().hasOnly(['privateFrom'])
-        && validPrice(request.resource.data.privateFrom);
+        && request.resource.data.keys().hasOnly(['privateFrom', 'ccl16', 'renewal3', 'womens'])
+        && request.resource.data.keys().hasAll(['privateFrom', 'ccl16', 'renewal3', 'womens'])
+        && existsAfter(/databases/$(database)/documents/settings/pricing)
+        && mirrorsPricing(request.resource.data,
+             getAfter(/databases/$(database)/documents/settings/pricing).data);
+    }
+
+    function mirrorsPricing(pub, pr) {
+      return pub.privateFrom == pr.privateFrom
+        && pub.ccl16 == bookable(pr.ccl16, pr.ccl16Stripe)
+        && pub.renewal3 == bookable(pr.renewal3, pr.renewal3Stripe)
+        && pub.womens == bookable(pr.womens, pr.womensStripe);
+    }
+
+    // Online price for a regular class: website price when it equals the confirmed Stripe amount.
+    function bookable(website, stripe) {
+      return website == stripe ? website : null;
     }
 
     function validPrice(p) {

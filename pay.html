@@ -556,7 +556,12 @@
     .cp-price input { max-width: 160px; }
     .cp-stripe { font-size: .78rem; color: var(--text-light); line-height: 1.5; word-break: break-all; }
     .cp-ok { font-size: .8rem; font-weight: 700; color: #15803d; margin-top: 4px; }
+    .cp-confirmed { font-size: .84rem; color: var(--navy); margin-top: 6px; }
+    .cp-change { border: none; background: none; color: var(--gold); font: inherit; font-weight: 800; font-size: .8rem; cursor: pointer; text-decoration: underline; padding: 0 4px; }
+    .cp-confirm-box { border: 1.5px dashed #e5e7eb; border-radius: 10px; padding: 10px 12px 6px; margin-top: 8px; }
+    .cp-ack span { font-size: .84rem; font-weight: 700; }
     .lc-row input.cp-invalid { border-color: #dc2626; }
+    .lc-row input[readonly] { background: #f3f4f6; color: #6b7280; }
 
     .rq-text {
       background: rgba(34,34,34,.04);
@@ -666,7 +671,7 @@
     <div class="lc" data-key="ccl16">
       <div class="lc-head">
         <span class="lc-title">16-Hour CCL Certification</span>
-        <span class="lc-price">$175</span>
+        <span class="lc-price">—</span>
       </div>
       <div class="lc-row">
         <label>Stripe Payment Link</label>
@@ -699,7 +704,7 @@
     <div class="lc" data-key="renewal3">
       <div class="lc-head">
         <span class="lc-title">3-Hour Renewal</span>
-        <span class="lc-price">$125</span>
+        <span class="lc-price">—</span>
       </div>
       <div class="lc-row">
         <label>Stripe Payment Link</label>
@@ -732,7 +737,7 @@
     <div class="lc" data-key="womens">
       <div class="lc-head">
         <span class="lc-title">Women's Class (4 hrs)</span>
-        <span class="lc-price">$125</span>
+        <span class="lc-price">—</span>
       </div>
       <div class="lc-row">
         <label>Stripe Payment Link</label>
@@ -1218,19 +1223,20 @@
   <script>
     // Message templates per class. {link}, {date} get replaced.
     const TEMPLATES = {
+      // Regular classes: {amount} is the current online price from settings/publicPricing (Class Pricing).
       ccl16: {
         title: 'the 16-Hour CCL Certification course',
-        amount: '$175',
-        suffix: '$175 covers your 16 hours of training. The $150 state fee is paid separately to ISP.'
+        amount: null,
+        suffix: '{amount} covers your 16 hours of training. The $150 state fee is paid separately to ISP.'
       },
       renewal3: {
         title: 'the 3-Hour CCL Renewal class',
-        amount: '$125',
+        amount: null,
         suffix: 'Reminder: the $150 state renewal fee is paid separately to ISP.'
       },
       womens: {
         title: "the Women's Class",
-        amount: '$125',
+        amount: null,
         suffix: null
       },
       private: {
@@ -1254,6 +1260,36 @@
       test:     'https://buy.stripe.com/6oUbJ18HS4R1gVe7hhak004'
     };
 
+    // ── Regular class prices (CCL, Renewal, Women's) ──
+    // Their Stripe links are fixed (above, never editable). The amount comes from the public
+    // settings/publicPricing, which has a price only when the website price equals the Stripe amount
+    // an editor confirmed in Class Pricing. null → paused: Copy SMS won't send the link.
+    const REGULAR_KEYS = ['ccl16', 'renewal3', 'womens'];
+    const PRICE_MISMATCH = '⚠️ Website price and Stripe checkout do not match. Update Stripe, then confirm the new Stripe amount here.';
+    function regularAmount(key) {
+      const pub = window.KAT_PUBLIC_PRICING;
+      if (pub === undefined) return undefined;              // still loading
+      const v = pub && pub[key];
+      return (typeof v === 'number' && v > 0 && v < 100000) ? v : null;
+    }
+    const fmtMoney = v => '$' + (Number.isInteger(v) ? v : v.toFixed(2));
+    // Why Copy SMS is blocked for a regular class, or null when it can be sent.
+    function regularBlock(key) {
+      if (!REGULAR_KEYS.includes(key)) return null;
+      const v = regularAmount(key);
+      if (v === undefined) return '⏳ Loading the current price — try again in a moment.';
+      if (v === null) return PRICE_MISMATCH;
+      return null;
+    }
+    function showRegularPrices() {
+      REGULAR_KEYS.forEach(key => {
+        const el = document.querySelector('.lc[data-key="' + key + '"] .lc-price');
+        const v = regularAmount(key);
+        if (el) el.textContent = v ? fmtMoney(v) : '—';
+      });
+    }
+    window.addEventListener('kat-pricing', showRegularPrices);
+
     // ── Storage ──
     const STORAGE_KEY = 'katcci_pay_helper_v1';
 
@@ -1274,6 +1310,13 @@
       const cardState = state[key] || {};
       card.querySelectorAll('[data-field]').forEach(input => {
         const field = input.dataset.field;
+        // Regular class links are fixed approved Stripe links — shown read-only.
+        if (field === 'link' && REGULAR_KEYS.includes(key)) {
+          input.value = DEFAULT_LINKS[key];
+          input.readOnly = true;
+          input.classList.add('has-value');
+          return;
+        }
         let val = cardState[field];
         // Fall back to the hardcoded Stripe link if none saved.
         if (field === 'link' && !val && DEFAULT_LINKS[key]) {
@@ -1415,7 +1458,10 @@ Reply with any questions before class day — see you soon!
 
       const tpl = TEMPLATES[key];
       if (!tpl) return null;
-      const stripeLink = cardState.link || DEFAULT_LINKS[key];
+      const regular = REGULAR_KEYS.includes(key);
+      if (regular && regularBlock(key)) return null;
+      const amount = regular ? fmtMoney(regularAmount(key)) : tpl.amount;
+      const stripeLink = regular ? DEFAULT_LINKS[key] : (cardState.link || DEFAULT_LINKS[key]);
       if (!stripeLink) return null;
 
       // Format the date-picker value (YYYY-MM-DD) → "June 6".
@@ -1425,7 +1471,7 @@ Reply with any questions before class day — see you soon!
         dateBit = ' on ' + new Date(dpp[0], dpp[1] - 1, dpp[2])
           .toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
       }
-      const suffixBit = tpl.suffix ? `\n\n${tpl.suffix}` : '';
+      const suffixBit = tpl.suffix ? `\n\n${tpl.suffix.replace('{amount}', amount)}` : '';
 
       // Wrap the Stripe link through the terms-acknowledgment page.
       const reserveLink = 'https://www.katcci.com/reserve?c=' + key +
@@ -1433,7 +1479,7 @@ Reply with any questions before class day — see you soon!
 
       return `Hi! You're confirmed for ${tpl.title}${dateBit}.
 
-To lock in your seat, review our quick terms and complete payment of ${tpl.amount} here:
+To lock in your seat, review our quick terms and complete payment of ${amount} here:
 
 ${reserveLink}
 
@@ -1645,11 +1691,18 @@ See you soon!
 
       if (!msg) {
         if (missing) {
+          // Regular classes: explain a price mismatch (or loading) instead of "add your link".
+          if (!missing.dataset.text) missing.dataset.text = missing.textContent;
+          const block = regularBlock(key);
+          missing.textContent = block || missing.dataset.text;
+          preview.classList.remove('show');
           missing.classList.add('show');
-          setTimeout(() => missing.classList.remove('show'), 2500);
+          clearTimeout(missing._t);
+          missing._t = setTimeout(() => missing.classList.remove('show'), block ? 8000 : 2500);
         }
         return;
       }
+      if (missing) missing.classList.remove('show');
 
       if (action === 'preview') {
         preview.textContent = msg;
@@ -1729,6 +1782,16 @@ See you soon!
         window.dispatchEvent(new Event('kat-schedule'));
       },
       () => {}   // reminders still work from a typed date/time if the schedule can't load
+    );
+
+    // Public pricing (settings/publicPricing) for the payment helper's Copy SMS: the current
+    // online price per regular class (null = paused until website and Stripe amounts match).
+    onSnapshot(doc(db, 'settings', 'publicPricing'),
+      snap => {
+        window.KAT_PUBLIC_PRICING = snap.exists() ? snap.data() : null;
+        window.dispatchEvent(new Event('kat-pricing'));
+      },
+      () => { window.KAT_PUBLIC_PRICING = null; window.dispatchEvent(new Event('kat-pricing')); }
     );
 
     const $ = id => document.getElementById(id);
@@ -1911,7 +1974,7 @@ See you soon!
         return '<div class="class-row' + (past ? ' is-past' : '') + '">' +
           '<div class="cr-info">' +
             '<div class="cr-date">' + dateStr + (timeStr ? ' · ' + timeStr : '') + (past ? ' · ended' : '') + '</div>' +
-            '<div class="cr-meta">' + info.label + ' · $' + it.price + '</div>' +
+            '<div class="cr-meta">' + info.label + ' · $' + it.price + (past ? '' : classOnlineNote(it)) + '</div>' +
           '</div>' +
           '<div class="cr-actions">' +
             '<button class="cr-edit" data-edit="' + it.id + '" title="Edit">✏️</button>' +
@@ -2656,36 +2719,42 @@ See you soon!
     renderQuickReview();
 
     // ════════ CLASS PRICING ════════
-    // Website prices live in Firestore settings/pricing (editors only). What each regular Stripe
-    // checkout charges comes ONLY from the trusted mapping in booking.js; Firestore never chooses a
-    // price or Stripe link for checkout. Online booking stays refused whenever a class's price
-    // differs from its approved checkout (booking.js isBookable), so a mismatch here can't
-    // charge customers a different amount than shown.
-    const APPROVED = window.KAT_BOOKING ? window.KAT_BOOKING.approvedCheckouts() : {};
+    // settings/pricing (editors only) holds each website price plus, for the three fixed-price regular
+    // classes, the Stripe amount an editor has confirmed the fixed Payment Link charges. The Stripe
+    // URLs themselves stay fixed in code (booking.js) and can't be edited here. Saving also writes the
+    // public settings/publicPricing: the Private "From" price and, per regular class, the price it can
+    // be booked online at — only when website price = confirmed Stripe amount (otherwise null, which
+    // pauses online booking and Copy SMS for that class). The Firestore rules enforce that link.
+    const CHECKOUTS = window.KAT_BOOKING ? window.KAT_BOOKING.regularCheckouts() : {};
     const PRIVATE_LINK = { price: Number(String(TEMPLATES.private.amount).replace(/[^0-9.]/g, '')), checkoutUrl: DEFAULT_LINKS.private };
     const PRICE_FIELDS = [
-      { field: 'ccl16',       type: 'ccl',     label: '16-Hour CCL Certification', checkout: APPROVED.ccl },
-      { field: 'renewal3',    type: 'renewal', label: '3-Hour Renewal',            checkout: APPROVED.renewal },
-      { field: 'womens',      type: 'womens',  label: "Women's Class",             checkout: APPROVED.womens },
+      { field: 'ccl16',       type: 'ccl',     label: '16-Hour CCL Certification', checkout: CHECKOUTS.ccl },
+      { field: 'renewal3',    type: 'renewal', label: '3-Hour Renewal',            checkout: CHECKOUTS.renewal },
+      { field: 'womens',      type: 'womens',  label: "Women's Class",             checkout: CHECKOUTS.womens },
       { field: 'privateFrom', type: null,      label: 'Private Training (starting price)', checkout: PRIVATE_LINK, isPrivate: true }
     ];
-    const MISMATCH_TEXT = '⚠️ Website price and Stripe checkout price do not match. Online booking for this class should not be published until the Stripe link is updated.';
+    const REGULAR_FIELDS = PRICE_FIELDS.filter(f => !f.isPrivate);
+    const MISMATCH_TEXT = '⚠️ Website price and Stripe checkout do not match. Update Stripe, then confirm the new Stripe amount here.';
+    const MATCH_TEXT = '✓ Website and Stripe pricing match';
     let savedPricing = null;          // settings/pricing as stored (null = not saved yet / unavailable)
     let unsubPricing = null;
     let cpDirty = false;              // unsaved edits in the pricing form
 
-    // Prices in effect: saved settings, else the approved checkout amounts.
-    function effectivePricing() {
-      const p = {};
-      PRICE_FIELDS.forEach(f => {
-        const v = savedPricing && savedPricing[f.field];
-        p[f.field] = (typeof v === 'number' && v > 0) ? v : f.checkout.price;
-      });
-      return p;
+    const stripeField = f => f.field + 'Stripe';
+    function savedNum(k) {
+      const v = savedPricing && savedPricing[k];
+      return (typeof v === 'number' && v > 0) ? v : null;
+    }
+    // Saved online-bookable price for a regular class: website price when it equals the confirmed
+    // Stripe amount, else null.
+    function bookableFromSaved(f) {
+      const w = savedNum(f.field), st = savedNum(stripeField(f));
+      return (w != null && w === st) ? w : null;
     }
     function defaultPriceFor(type) {
       const f = PRICE_FIELDS.find(x => x.type === type);
-      return f ? effectivePricing()[f.field] : '';
+      const v = f ? savedNum(f.field) : null;
+      return v == null ? '' : v;
     }
     // Positive, at most 2 decimals, no blanks, no exponent notation.
     function parsePrice(str) {
@@ -2697,72 +2766,130 @@ See you soon!
     const money = v => '$' + (Number.isInteger(v) ? v : v.toFixed(2));
     const shortLink = u => String(u || '').replace(/^https:\/\//, '');
 
-    // Warning on the schedule form when a class price won't match its online checkout.
+    // Note for a scheduled class that can't be booked online at its listed price.
+    function classOnlineNote(it) {
+      const f = REGULAR_FIELDS.find(x => x.type === it.type);
+      if (!f || !savedPricing) return '';
+      const b = bookableFromSaved(f);
+      if (b == null) return ' · ⚠️ online booking paused (Stripe amount not confirmed)';
+      if (Number(it.price) !== b) return ' · ⚠️ not bookable online (class ' + money(Number(it.price)) + ' ≠ current ' + money(b) + ')';
+      return '';
+    }
+
+    // Warning on the schedule form when a class price won't match the current online price.
     function updatePriceHint() {
       const hint = $('fPriceHint');
-      const f = PRICE_FIELDS.find(x => x.type === fType.value);
+      const f = REGULAR_FIELDS.find(x => x.type === fType.value);
       const v = parsePrice(fPrice.value);
-      if (!f || v == null) { hint.textContent = ''; hint.style.color = ''; return; }
-      if (v === f.checkout.price) {
-        hint.textContent = '✓ Matches the approved ' + money(f.checkout.price) + ' Stripe checkout — this class can be booked online.';
+      if (!f || v == null || !savedPricing) { hint.textContent = ''; hint.style.color = ''; return; }
+      const b = bookableFromSaved(f);
+      if (b == null) {
+        hint.textContent = "⚠️ Online booking for this class type is paused until its website price and confirmed Stripe amount match (Class Pricing). This class will show “Text to Reserve”.";
+        hint.style.color = '#b45309';
+      } else if (v === b) {
+        hint.textContent = '✓ Matches the current online price (' + money(b) + ') — this class can be booked online.';
         hint.style.color = '#15803d';
       } else {
-        hint.textContent = '⚠️ ' + money(v) + " doesn't match the approved Stripe checkout (" + money(f.checkout.price) + '). This class will show “Text to Reserve” instead of online booking.';
+        hint.textContent = '⚠️ ' + money(v) + " doesn't match the current online price (" + money(b) + '). This class will show “Text to Reserve” instead of online booking.';
         hint.style.color = '#b45309';
       }
     }
     fPrice.addEventListener('input', updatePriceHint);
 
     function renderPricingRows() {
-      const eff = effectivePricing();
-      $('cpRows').innerHTML = PRICE_FIELDS.map(f =>
-        '<div class="cp-row" data-cp="' + f.field + '">' +
+      $('cpRows').innerHTML = PRICE_FIELDS.map(f => {
+        const w = savedNum(f.field);
+        let html = '<div class="cp-row" data-cp="' + f.field + '">' +
           '<div class="cp-name">' + esc(f.label) + '</div>' +
           '<div class="lc-row"><label for="cp_' + f.field + '">Website price' + (f.isPrivate ? ' (shown as “From …”)' : '') + '</label>' +
-            '<div class="cp-price"><span>$</span><input type="number" id="cp_' + f.field + '" inputmode="decimal" min="0.01" step="0.01" value="' + eff[f.field] + '"></div></div>' +
-          '<div class="cp-stripe">' + (f.isPrivate ? 'Staff Private payment link (Copy SMS): ' : 'Approved Stripe Payment Link: ') +
-            '<a href="' + esc(f.checkout.checkoutUrl) + '" target="_blank" rel="noopener">' + esc(shortLink(f.checkout.checkoutUrl)) + '</a><br>' +
-            'Expected checkout amount: <strong>' + money(f.checkout.price) + '</strong>' +
-            (f.isPrivate ? ' · Private has no online booking; it stays contact-to-reserve.' : '') + '</div>' +
-          '<div class="cp-ok" hidden></div>' +
+            '<div class="cp-price"><span>$</span><input type="number" id="cp_' + f.field + '" inputmode="decimal" min="0.01" step="0.01" value="' +
+            (w != null ? w : (f.isPrivate ? f.checkout.price : '')) + '"></div></div>';
+        if (f.isPrivate) {
+          html += '<div class="cp-stripe">Staff Private payment link (Copy SMS): ' +
+            '<a href="' + esc(f.checkout.checkoutUrl) + '" target="_blank" rel="noopener">' + esc(shortLink(f.checkout.checkoutUrl)) + '</a> · charges ' +
+            '<strong>' + money(f.checkout.price) + '</strong> · Private has no online booking; it stays contact-to-reserve.</div>';
+        } else {
+          const st = savedNum(stripeField(f));
+          html += '<div class="cp-stripe">Approved Stripe Payment Link (fixed): ' +
+              '<a href="' + esc(f.checkout.checkoutUrl) + '" target="_blank" rel="noopener">' + esc(shortLink(f.checkout.checkoutUrl)) + '</a></div>' +
+            '<div class="cp-confirmed">Confirmed Stripe amount: <strong id="cpSv_' + f.field + '">' + (st != null ? money(st) : 'not confirmed yet') + '</strong> ' +
+              '<button type="button" class="cp-change" data-cp-change="' + f.field + '">Change…</button></div>' +
+            '<div class="cp-confirm-box" id="cpBox_' + f.field + '" hidden>' +
+              '<div class="lc-row"><label for="cpS_' + f.field + '">New confirmed Stripe amount</label>' +
+                '<div class="cp-price"><span>$</span><input type="number" id="cpS_' + f.field + '" inputmode="decimal" min="0.01" step="0.01"></div></div>' +
+              '<label class="check-row cp-ack"><input type="checkbox" id="cpAck_' + f.field + '"><span id="cpAckText_' + f.field + '"></span></label>' +
+              '<button type="button" class="cp-change" data-cp-cancel="' + f.field + '">Cancel</button>' +
+            '</div>';
+        }
+        return html + '<div class="cp-ok" hidden></div>' +
           '<div class="rr-notice warn cp-warn" hidden></div>' +
           '<div class="rr-notice info cp-info" hidden></div>' +
-        '</div>').join('');
+        '</div>';
+      }).join('');
       PRICE_FIELDS.forEach(f => {
         $('cp_' + f.field).addEventListener('input', () => { cpDirty = true; checkPricingRow(f); });
+        if (!f.isPrivate) {
+          $('cpS_' + f.field).addEventListener('input', () => { cpDirty = true; $('cpAck_' + f.field).checked = false; checkPricingRow(f); });
+          $('cpAck_' + f.field).addEventListener('change', () => { cpDirty = true; checkPricingRow(f); });
+          // Not confirmed yet → open the confirmation straight away.
+          if (savedNum(stripeField(f)) == null) openStripeBox(f, false);
+        }
         checkPricingRow(f);
       });
+    }
+    function openStripeBox(f, focus) {
+      const box = $('cpBox_' + f.field);
+      box.hidden = false;
+      const w = parsePrice($('cp_' + f.field).value);
+      if (!$('cpS_' + f.field).value && w != null) $('cpS_' + f.field).value = w;
+      $('cpAck_' + f.field).checked = false;
+      checkPricingRow(f);
+      if (focus) $('cpS_' + f.field).focus();
+    }
+    function closeStripeBox(f) {
+      $('cpBox_' + f.field).hidden = true;
+      $('cpS_' + f.field).value = '';
+      $('cpAck_' + f.field).checked = false;
+      checkPricingRow(f);
+    }
+    $('cpRows').addEventListener('click', e => {
+      const ch = e.target.closest('[data-cp-change]'), ca = e.target.closest('[data-cp-cancel]');
+      if (ch) { cpDirty = true; openStripeBox(PRICE_FIELDS.find(f => f.field === ch.dataset.cpChange), true); }
+      if (ca) { const f = PRICE_FIELDS.find(x => x.field === ca.dataset.cpCancel); if (savedNum(stripeField(f)) != null) closeStripeBox(f); }
+    });
+    // Stripe amount the form would save for a regular class (box open → the typed amount).
+    function formStripe(f) {
+      return $('cpBox_' + f.field).hidden ? savedNum(stripeField(f)) : parsePrice($('cpS_' + f.field).value);
     }
     function checkPricingRow(f) {
       const row = document.querySelector('[data-cp="' + f.field + '"]');
       const input = $('cp_' + f.field), ok = row.querySelector('.cp-ok'), warn = row.querySelector('.cp-warn'), info = row.querySelector('.cp-info');
       const v = parsePrice(input.value);
       input.classList.toggle('cp-invalid', v == null);
-      info.hidden = true;
-      if (v == null) {
-        ok.hidden = true;
-        warn.textContent = '⚠️ Enter a price above $0 with at most 2 decimal places.';
-        warn.hidden = false;
-      } else if (v !== f.checkout.price && f.isPrivate) {
+      ok.hidden = true; warn.hidden = true; info.hidden = true;
+      const show = (el, t) => { el.textContent = t; el.hidden = false; };
+      if (v == null) return show(warn, '⚠️ Enter a price above $0 with at most 2 decimal places.');
+      if (f.isPrivate) {
         // Private is a public "From $___" starting price; it may differ from the staff payment link.
-        ok.hidden = true;
-        warn.hidden = true;
-        info.textContent = 'ℹ️ The public starting price (From ' + money(v) + ') differs from the staff Private payment link (' +
-          money(f.checkout.price) + '). That is fine for a "From" price — just send the payment link that matches what you quoted.';
-        info.hidden = false;
-      } else if (v !== f.checkout.price) {
-        ok.hidden = true;
-        warn.textContent = MISMATCH_TEXT + ' (Stripe charges ' + money(f.checkout.price) + '; website price ' + money(v) + '.)';
-        warn.hidden = false;
-      } else {
-        warn.hidden = true;
-        ok.textContent = '✓ Matches the Stripe checkout amount';
-        ok.hidden = false;
+        if (v !== f.checkout.price) {
+          return show(info, 'ℹ️ The public starting price (From ' + money(v) + ') differs from the staff Private payment link (' +
+            money(f.checkout.price) + '). That is fine for a "From" price — just send the payment link that matches what you quoted.');
+        }
+        return show(ok, '✓ Matches the staff Private payment link amount');
       }
+      const boxOpen = !$('cpBox_' + f.field).hidden;
+      const st = formStripe(f);
+      if (boxOpen) {
+        $('cpAckText_' + f.field).textContent = 'I confirm I have updated and verified this Stripe Payment Link charges ' + (st != null ? money(st) : '$___') + '.';
+        $('cpS_' + f.field).classList.toggle('cp-invalid', st == null);
+      }
+      if (st == null) return show(warn, boxOpen ? '⚠️ Enter the amount this Stripe Payment Link now charges, then tick the confirmation.' : '⚠️ No confirmed Stripe amount yet — confirm what this Stripe Payment Link charges.');
+      if (v !== st) return show(warn, MISMATCH_TEXT + ' (Website ' + money(v) + '; confirmed Stripe amount ' + money(st) + '.)');
+      show(ok, MATCH_TEXT + (boxOpen && !$('cpAck_' + f.field).checked ? ' — tick the confirmation, then Save Pricing.' : ''));
     }
     function showPricingMeta() {
       const meta = $('cpMeta');
-      if (!savedPricing) { meta.textContent = 'Not saved yet — showing the current approved checkout prices.'; return; }
+      if (!savedPricing) { meta.textContent = 'Not saved yet.'; return; }
       const d = savedPricing.updatedAt && savedPricing.updatedAt.toDate ? savedPricing.updatedAt.toDate() : null;
       meta.textContent = 'Last saved' + (d ? ' ' + d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '') +
         (savedPricing.updatedBy ? ' by ' + savedPricing.updatedBy : '') + '.';
@@ -2780,13 +2907,14 @@ See you soon!
           // A new (not yet edited) class picks up the saved default price.
           if (!editingId && String(fPrice.value) === String(prevDefault)) fPrice.value = defaultPriceFor(fType.value);
           updatePriceHint();
+          if (currentItems.length) renderList();
         },
         err => {
           savedPricing = null;
           renderPricingRows();
           $('cpMeta').textContent = '';
           cpShow(err.code === 'permission-denied'
-            ? "Class Pricing isn't available yet: the Firestore rule for settings/pricing hasn't been deployed. Showing the current approved checkout prices."
+            ? "Class Pricing isn't available yet: the Firestore rules for it haven't been deployed."
             : 'Could not load pricing: ' + err.message, 'err');
         }
       );
@@ -2797,29 +2925,50 @@ See you soon!
     }
 
     $('cpSaveBtn').onclick = async () => {
-      const values = {};
-      let bad = [];
+      const values = {}, stripe = {};
+      const bad = [], unticked = [], unconfirmed = [];
       PRICE_FIELDS.forEach(f => {
         const v = parsePrice($('cp_' + f.field).value);
         if (v == null) bad.push(f.label); else values[f.field] = v;
+        if (!f.isPrivate) {
+          if (!$('cpBox_' + f.field).hidden) {
+            const st = parsePrice($('cpS_' + f.field).value);
+            if (st == null) bad.push(f.label + ' (confirmed Stripe amount)');
+            else if (!$('cpAck_' + f.field).checked) unticked.push(f.label);
+            else stripe[stripeField(f)] = st;
+          } else {
+            const st = savedNum(stripeField(f));
+            if (st == null) { unconfirmed.push(f.label); openStripeBox(f, false); } else stripe[stripeField(f)] = st;
+          }
+        }
         checkPricingRow(f);
       });
       if (bad.length) return cpShow('Not saved — fix the price for: ' + bad.join(', ') + '. Prices must be above $0 with at most 2 decimal places.', 'err');
+      if (unconfirmed.length) return cpShow('Not saved — confirm the Stripe amount for: ' + unconfirmed.join(', ') + '.', 'err');
+      if (unticked.length) return cpShow('Not saved — tick “I confirm I have updated and verified this Stripe Payment Link…” for: ' + unticked.join(', ') + '.', 'err');
+      // Public copy: Private "From" price + each regular class's online-bookable price (or null).
+      const publicPricing = { privateFrom: values.privateFrom };
+      const paused = [];
+      REGULAR_FIELDS.forEach(f => {
+        const ok = values[f.field] === stripe[stripeField(f)];
+        publicPricing[f.field] = ok ? values[f.field] : null;
+        if (!ok) paused.push(f.label);
+      });
       $('cpSaveBtn').disabled = true;
       try {
-        // One batch: settings/pricing and the public copy of the Private "from" price
-        // (settings/publicPricing holds privateFrom only) are saved together or not at all.
+        // One batch: both documents are saved together or not at all.
         const batch = writeBatch(db);
         batch.set(doc(db, 'settings', 'pricing'), {
           ...values,
+          ...stripe,
           updatedAt: serverTimestamp(),
           updatedBy: staffEmail
         });
-        batch.set(doc(db, 'settings', 'publicPricing'), { privateFrom: values.privateFrom });
+        batch.set(doc(db, 'settings', 'publicPricing'), publicPricing);
         await batch.commit();
         cpDirty = false;
-        const mismatched = PRICE_FIELDS.filter(f => !f.isPrivate && values[f.field] !== f.checkout.price).map(f => f.label);
-        cpShow('✓ Pricing saved.' + (mismatched.length ? ' Note: ' + mismatched.join(', ') + " doesn't match its Stripe checkout — see the warning." : ''), 'ok');
+        cpShow('✓ Pricing saved.' + (paused.length ? ' Online booking and Copy SMS are paused for ' + paused.join(', ') +
+          ' until its website price and confirmed Stripe amount match.' : ''), 'ok');
       } catch (e) {
         cpShow('Save failed: ' + e.message, 'err');
       } finally {

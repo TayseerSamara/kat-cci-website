@@ -15,11 +15,15 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
 const sid = () => 'cs_test_' + Date.now().toString(36) + 'Kat' + (++n) + 'x9Q2';
 
 const iso = k => { const d = new Date(new Date(NOW).getTime() + k * 86400000); return d.toISOString().slice(0, 10); };
-const doc = f => ({ name: 'x', fields: Object.fromEntries(Object.entries(f).map(([k, v]) => [k, typeof v === 'number' ? { integerValue: String(v) } : { stringValue: v }])) });
+const doc = f => ({ name: 'x', fields: Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v === null ? { nullValue: null } : typeof v === 'number' ? { integerValue: String(v) } : { stringValue: v }])) });
+// settings/publicPricing stand-in: current online prices (website price = confirmed Stripe amount).
+const PUB_MATCHED = { privateFrom: 200, ccl16: 175, renewal3: 125, womens: 125 };
+const PUB = { current: PUB_MATCHED };
 const STANDINS = {
   TESTccl: { type: 'ccl', date1: iso(12), date2: iso(13), endDate: iso(13), time: '09:30', price: 175 },
   TESTrenewal: { type: 'renewal', date1: iso(15), date2: '', endDate: iso(15), time: '18:00', price: 125 },
-  TESTwomens: { type: 'womens', date1: iso(18), date2: '', endDate: iso(18), time: '12:00', price: 125 }
+  TESTwomens: { type: 'womens', date1: iso(18), date2: '', endDate: iso(18), time: '12:00', price: 125 },
+  TESTccl185: { type: 'ccl', date1: iso(20), date2: iso(21), endDate: iso(21), time: '09:30', price: 185 }
 };
 
 (async () => {
@@ -33,6 +37,8 @@ const STANDINS = {
       const id = new URL(r.request().url()).pathname.split('/').pop();
       STANDINS[id] ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(doc(STANDINS[id])) }) : r.fulfill({ status: 404, body: '{}' });
     });
+    await ctx.route(/firestore\.googleapis\.com\/v1\/projects\/katcci\/databases\/\(default\)\/documents\/settings\/publicPricing/, r =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(doc(PUB.current)) }));
     await ctx.route(/^https:\/\/(buy|checkout)\.stripe\.com\//, r => r.fulfill({ status: 200, contentType: 'text/html', body: '<title>stripe stand-in</title>' }));
     const page = await ctx.newPage();
     await page.clock.setFixedTime(new Date(NOW));
@@ -121,6 +127,41 @@ const STANDINS = {
     ok(!(await pending(page)) && (await confirmed(page, '?session_id=' + sid())).length === 0, label + ': nothing pending, no conversion');
     await ctx.close();
   }
+
+  console.log('Regular price changed to $185 (Stripe updated and confirmed in Class Pricing)');
+  PUB.current = { ...PUB_MATCHED, ccl16: 185 };
+  for (const [label, path, value] of [
+    ['Scheduled $185 CCL class', '/reserve?class=TESTccl185', 185],
+    ['Staff-texted CCL link', '/reserve?c=ccl16&to=' + encodeURIComponent(REG.ccl), 185],
+    ['Promotional CCL (fixed promo price unchanged)', '/reserve?promo=ccl-2026-10-17', 160],
+    ["Promotional Women's (unchanged)", '/reserve?promo=womens-2026-10-24', 100],
+    ['Renewal (unchanged)', '/reserve?c=renewal3&to=' + encodeURIComponent(REG.renewal), 125]]) {
+    ({ ctx, page, errors } = await fresh());
+    await checkout(page, path);
+    const id = sid();
+    const ev = await confirmed(page, '?session_id=' + id);
+    ok(ev.length === 1 && ev[0].value === value && ev[0].transaction_id === id, `${label}: one conversion, value ${value}`);
+    ok(errors.length === 0, `${label}: no JavaScript errors ` + errors.join(' | '));
+    await ctx.close();
+  }
+  ({ ctx, page, errors } = await fresh());
+  await page.goto(BASE + '/terms');
+  for (const [v, kind, why] of [[175, 'class:ccl16', 'old $175 (no longer the confirmed price)'], [999, 'class:ccl16', 'tampered $999'], [185, 'class:private', 'unknown class key']]) {
+    await page.evaluate(([v, kind]) => localStorage.setItem('katcci_pending_purchase', JSON.stringify({ value: v, currency: 'USD', kind, at: Date.now() })), [v, kind]);
+    ok((await confirmed(page, '?session_id=' + sid() + '&value=185')).length === 0, 'pending ' + why + ': no conversion (URL value ignored)');
+  }
+  await ctx.close();
+
+  console.log('Website and Stripe amounts do not match (public price null)');
+  PUB.current = { ...PUB_MATCHED, ccl16: null };
+  ({ ctx, page, errors } = await fresh());
+  await checkout(page, '/reserve?c=ccl16&to=' + encodeURIComponent(REG.ccl));
+  ok(!(await pending(page)) && (await confirmed(page, '?session_id=' + sid())).length === 0, 'staff-texted CCL link while paused: nothing pending, no conversion');
+  await page.goto(BASE + '/terms');
+  await page.evaluate(() => localStorage.setItem('katcci_pending_purchase', JSON.stringify({ value: 175, currency: 'USD', kind: 'class:ccl16', at: Date.now() })));
+  ok((await confirmed(page, '?session_id=' + sid())).length === 0, 'pending $175 from before the mismatch: no conversion');
+  await ctx.close();
+  PUB.current = PUB_MATCHED;
 
   console.log('Same session id twice (e.g. back button to Stripe and return again)');
   ({ ctx, page, errors } = await fresh());
