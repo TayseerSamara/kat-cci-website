@@ -70,7 +70,7 @@ const STANDINS = {
   ok(/^\/reserve\?class=[A-Za-z0-9]+&utm_source=google&utm_medium=cpc&utm_campaign=fall_classes&gclid=Cj0-booking_test$/.test(cclCard.link), 'card links to /reserve for that exact class, carrying ad parameters: ' + cclCard.link);
   ok(!/price|to=|stripe/i.test(cclCard.link + womCard.link), 'card links carry no price or Stripe destination');
   const privText = await page.$eval('#ucPrivate', e => e.innerText.replace(/\s+/g, ' '));
-  ok(/From \$250/.test(privText) && !(await page.$('#ucPrivate a.btn-reserve')), 'Private card unchanged (From $250, contact to reserve)');
+  ok(/From \$\d+(\.\d\d)?/.test(privText) && !(await page.$('#ucPrivate a.btn-reserve')), 'Private card stays contact-to-reserve, showing its "From $___" price (' + (privText.match(/From \$[\d.]+/) || ['?'])[0] + ')');
   const cclId = new URLSearchParams(cclCard.link.split('?')[1]).get('class');
 
   // CCL: card → reserve → $175 checkout

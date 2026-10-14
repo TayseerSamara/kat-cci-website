@@ -2726,6 +2726,7 @@ See you soon!
             (f.isPrivate ? ' · Private has no online booking; it stays contact-to-reserve.' : '') + '</div>' +
           '<div class="cp-ok" hidden></div>' +
           '<div class="rr-notice warn cp-warn" hidden></div>' +
+          '<div class="rr-notice info cp-info" hidden></div>' +
         '</div>').join('');
       PRICE_FIELDS.forEach(f => {
         $('cp_' + f.field).addEventListener('input', () => { cpDirty = true; checkPricingRow(f); });
@@ -2734,13 +2735,21 @@ See you soon!
     }
     function checkPricingRow(f) {
       const row = document.querySelector('[data-cp="' + f.field + '"]');
-      const input = $('cp_' + f.field), ok = row.querySelector('.cp-ok'), warn = row.querySelector('.cp-warn');
+      const input = $('cp_' + f.field), ok = row.querySelector('.cp-ok'), warn = row.querySelector('.cp-warn'), info = row.querySelector('.cp-info');
       const v = parsePrice(input.value);
       input.classList.toggle('cp-invalid', v == null);
+      info.hidden = true;
       if (v == null) {
         ok.hidden = true;
         warn.textContent = '⚠️ Enter a price above $0 with at most 2 decimal places.';
         warn.hidden = false;
+      } else if (v !== f.checkout.price && f.isPrivate) {
+        // Private is a public "From $___" starting price; it may differ from the staff payment link.
+        ok.hidden = true;
+        warn.hidden = true;
+        info.textContent = 'ℹ️ The public starting price (From ' + money(v) + ') differs from the staff Private payment link (' +
+          money(f.checkout.price) + '). That is fine for a "From" price — just send the payment link that matches what you quoted.';
+        info.hidden = false;
       } else if (v !== f.checkout.price) {
         ok.hidden = true;
         warn.textContent = MISMATCH_TEXT + ' (Stripe charges ' + money(f.checkout.price) + '; website price ' + money(v) + '.)';
@@ -2809,7 +2818,7 @@ See you soon!
         batch.set(doc(db, 'settings', 'publicPricing'), { privateFrom: values.privateFrom });
         await batch.commit();
         cpDirty = false;
-        const mismatched = PRICE_FIELDS.filter(f => values[f.field] !== f.checkout.price).map(f => f.label);
+        const mismatched = PRICE_FIELDS.filter(f => !f.isPrivate && values[f.field] !== f.checkout.price).map(f => f.label);
         cpShow('✓ Pricing saved.' + (mismatched.length ? ' Note: ' + mismatched.join(', ') + " doesn't match its Stripe checkout — see the warning." : ''), 'ok');
       } catch (e) {
         cpShow('Save failed: ' + e.message, 'err');

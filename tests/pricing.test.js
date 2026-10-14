@@ -30,7 +30,7 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   }
   const val = (page, sel) => page.$eval(sel, e => e.value);
   const txt = (page, sel) => page.$eval(sel, e => e.textContent);
-  const row = (page, f) => page.$eval(`[data-cp="${f}"]`, e => ({ text: e.innerText.replace(/\s+/g, ' '), warn: !e.querySelector('.cp-warn').hidden, okMark: !e.querySelector('.cp-ok').hidden }));
+  const row = (page, f) => page.$eval(`[data-cp="${f}"]`, e => ({ text: e.innerText.replace(/\s+/g, ' '), warn: !e.querySelector('.cp-warn').hidden, info: !e.querySelector('.cp-info').hidden, okMark: !e.querySelector('.cp-ok').hidden }));
   const saved = page => page.evaluate(() => { const p = window.__demoDb.settings.get('pricing'); return p ? { ...p, updatedAt: !!p.updatedAt } : null; });
   const pub = page => page.evaluate(() => { const p = window.__demoDb.settings.get('publicPricing'); return p ? { ...p } : null; });
   const classes = page => page.evaluate(() => Object.fromEntries([...window.__demoDb.classes.entries()].map(([k, v]) => [k, v.price])));
@@ -62,15 +62,27 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   await page.fill('#cp_renewal3', '130.50');
   await page.fill('#cp_womens', '120');
   await page.fill('#cp_privateFrom', '275');
-  for (const f of ['ccl16', 'renewal3', 'womens', 'privateFrom']) {
+  for (const f of ['ccl16', 'renewal3', 'womens']) {
     const r = await row(page, f);
-    ok(r.warn && r.text.includes(MISMATCH), `${f}: mismatch warning shown before saving`);
+    ok(r.warn && r.text.includes(MISMATCH) && !r.info, `${f}: strict mismatch warning shown before saving`);
   }
+  const pr = await row(page, 'privateFrom');
+  ok(pr.info && !pr.warn && !pr.text.includes(MISMATCH) && /starting price \(From \$275\) differs from the staff Private payment link \(\$250\)/.test(pr.text),
+     'privateFrom: informational note only (no mismatch warning) for a different "From" price');
   const msg = await save(page);
   const s = await saved(page);
   ok(/✓ Pricing saved/.test(msg), 'Save Pricing → "✓ Pricing saved."');
   ok(s.ccl16 === 185 && s.renewal3 === 130.5 && s.womens === 120 && s.privateFrom === 275 && s.updatedBy === 'tony@katcci.com' && s.updatedAt, 'saved values exact (185 / 130.5 / 120 / 275), stamped with editor and time');
-  ok(/doesn't match its Stripe checkout/.test(msg), 'save message points out the Stripe mismatches');
+  ok(/doesn't match its Stripe checkout/.test(msg) && /16-Hour CCL Certification, 3-Hour Renewal, Women's Class doesn't/.test(msg) && !/Private/.test(msg),
+     'save message lists the three regular classes only (not Private)');
+  await page.fill('#cp_privateFrom', '200');
+  await save(page);
+  const pr2 = await row(page, 'privateFrom');
+  ok(pr2.info && !pr2.warn && /✓ Pricing saved\./.test(await txt(page, '#cpMsg')), 'Private From $200 saves with an informational note, no warning');
+  await page.fill('#cp_privateFrom', 'x'.replace('x', ''));
+  ok((await row(page, 'privateFrom')).warn, 'invalid Private price still shows the validation warning');
+  await page.fill('#cp_privateFrom', '275');
+  await save(page);
   ok(JSON.stringify(await classes(page)) === JSON.stringify(classesBefore), 'existing scheduled classes NOT repriced: ' + JSON.stringify(classesBefore));
   const p1 = await pub(page);
   ok(JSON.stringify(p1) === '{"privateFrom":275}' && p1.privateFrom === s.privateFrom, 'settings/publicPricing = { privateFrom: 275 } only, in sync with settings/pricing');
