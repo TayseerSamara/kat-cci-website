@@ -102,6 +102,41 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   ok(log.firebase === 0 && log.errors.length === 0, 'demo: zero Firebase requests, no JavaScript errors ' + log.errors.join(' | '));
   await ctx.close();
 
+  console.log('Finding Class Pricing in demo mode');
+  {
+    const c2 = await browser.newContext({ viewport: { width: 390, height: 860 } });
+    await stubGoogle(c2); await c2.route(FIREBASE_HOSTS, r => r.abort());
+    const p2 = await c2.newPage(); const errs = [];
+    p2.on('pageerror', e => errs.push(e.message));
+    const inView = id => p2.$eval('#' + id, e => { const r = e.getBoundingClientRect(); return r.height > 0 && r.top < window.innerHeight && r.bottom > 0; });
+    await p2.goto(SITE + '/pay?demo');
+    await p2.waitForSelector('#demoSignin', { state: 'visible', timeout: 10000 });
+    ok(!(await p2.isVisible('#cpCard')) && /Demo sign-in/.test(await p2.textContent('#demoSignin')), 'before sign-in: staff tools hidden; banner offers "Demo sign-in — show staff tools"');
+    await p2.click('#demoSignin');
+    await p2.waitForSelector('[data-demo-jump="cpCard"]', { state: 'visible' });
+    ok(await p2.isVisible('#cpCard') && !(await p2.isVisible('#demoSignin')), 'one tap signs in (demo); Class Pricing is shown');
+    await p2.click('[data-demo-jump="cpCard"]'); await p2.waitForTimeout(900);
+    ok(await inView('cpCard'), '"💲 Class Pricing" jump link scrolls the card into view');
+    ok(errs.length === 0, 'no JavaScript errors ' + errs.join(' | '));
+    await c2.close();
+    // Fresh tab, opened directly at #pricing (a real page load, not a same-page hash change).
+    const c3 = await browser.newContext({ viewport: { width: 390, height: 860 } });
+    await stubGoogle(c3); await c3.route(FIREBASE_HOSTS, r => r.abort());
+    const p3 = await c3.newPage();
+    await p3.goto(SITE + '/pay?demo#pricing');
+    await p3.waitForSelector('#cpCard', { state: 'visible', timeout: 10000 }).catch(() => {});
+    await p3.waitForTimeout(1200);
+    const view3 = await p3.$eval('#cpCard', e => { const r = e.getBoundingClientRect(); return r.height > 0 && r.top < window.innerHeight && r.bottom > 0; });
+    ok(view3 && !(await p3.isVisible('#signinCard')), 'fresh /pay?demo#pricing: signs in (demo) and opens straight to Class Pricing');
+    await p3.goto(SITE + '/pay?demo');
+    await p3.reload(); await p3.waitForSelector('#demoSignin', { state: 'visible' });
+    await p3.evaluate(() => { location.hash = 'pricing'; });
+    await p3.waitForTimeout(2000);
+    const view4 = await p3.$eval('#cpCard', e => { const r = e.getBoundingClientRect(); return r.height > 0 && r.top < window.innerHeight && r.bottom > 0; });
+    ok(view4, 'adding #pricing to an open demo page also opens Class Pricing');
+    await c3.close();
+  }
+
   console.log('No pricing saved yet (fresh demo)');
   ({ ctx, page, log } = await staffPage('?demo=fresh'));
   ok(await val(page, '#cp_ccl16') === '175' && await val(page, '#cp_renewal3') === '125' && await val(page, '#cp_womens') === '125' && await val(page, '#cp_privateFrom') === '250', 'falls back to the approved checkout prices');

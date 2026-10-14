@@ -207,6 +207,54 @@ opened.style.cssText = 'margin-top:4px;font-weight:600;font-family:Menlo,monospa
 banner.appendChild(opened);
 document.body.prepend(banner);
 
+// Staff tools (schedule, Class Pricing, roster, reviews) sit behind sign-in, as on the real page.
+// In demo mode, offer one tap to sign in, then jump links. /pay?demo#pricing opens Class Pricing directly.
+const staffBar = document.createElement('div');
+staffBar.style.cssText = 'margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;';
+const pill = 'border:none;border-radius:100px;padding:6px 12px;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer;';
+staffBar.innerHTML =
+  '<button type="button" id="demoSignin" style="' + pill + 'background:#fff;color:#1d4ed8;">🔑 Demo sign-in — show staff tools</button>' +
+  '<span id="demoJumps" hidden>Jump to: ' +
+    '<button type="button" data-demo-jump="cpCard" style="' + pill + 'background:#fff;color:#1d4ed8;">💲 Class Pricing</button> ' +
+    '<button type="button" data-demo-jump="formTitle" style="' + pill + 'background:rgba(255,255,255,.2);color:#fff;">📅 Schedule</button> ' +
+    '<button type="button" data-demo-jump="rosterFormTitle" style="' + pill + 'background:rgba(255,255,255,.2);color:#fff;">👥 Roster</button> ' +
+    '<button type="button" data-demo-jump="rqCard" style="' + pill + 'background:rgba(255,255,255,.2);color:#fff;">⭐ Reviews</button>' +
+  '</span>';
+banner.insertBefore(staffBar, opened);
+
+function jumpTo(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.scrollMarginTop = (banner.offsetHeight + 12) + 'px';   // keep it clear of the sticky banner
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function demoSignIn(thenJump) {
+  const btn = document.getElementById('signinBtn');
+  if (btn && !currentUser) btn.click();
+  if (thenJump) {
+    const wait = setInterval(() => {
+      const m = document.getElementById('scheduleManager');
+      if (m && getComputedStyle(m).display !== 'none') { clearInterval(wait); setTimeout(() => jumpTo(thenJump), 150); }
+    }, 100);
+  }
+}
+staffBar.querySelector('#demoSignin').addEventListener('click', () => demoSignIn(null));
+staffBar.addEventListener('click', e => { const b = e.target.closest('[data-demo-jump]'); if (b) jumpTo(b.dataset.demoJump); });
+authListeners.add(user => {
+  staffBar.querySelector('#demoSignin').hidden = !!user;
+  staffBar.querySelector('#demoJumps').hidden = !user;
+});
+function openPricingFromHash() {
+  if (location.hash !== '#pricing') return;
+  // This file loads before pay.html wires up its sign-in button; wait until it's ready.
+  const ready = setInterval(() => {
+    const btn = document.getElementById('signinBtn');
+    if (btn && btn.onclick) { clearInterval(ready); demoSignIn('cpCard'); }
+  }, 100);
+}
+openPricingFromHash();
+window.addEventListener('hashchange', openPricingFromHash);
+
 // Called by pay.html right before it opens an sms:/mailto: link, so the link is
 // visible even on a computer with no texting app.
 export function noteOpened(href) {
