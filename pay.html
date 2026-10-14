@@ -967,8 +967,8 @@
           <input type="time" id="fTime">
         </div>
         <div class="lc-row">
-          <label>Price for this class ($)</label>
-          <input type="number" id="fPrice" min="0" step="5" inputmode="numeric">
+          <label>Tuition ($) — set once per class type in 💲 Class Pricing</label>
+          <input type="number" id="fPrice" readonly tabindex="-1">
           <div class="mgr-hint" id="fPriceHint"></div>
         </div>
         <div class="lc-actions">
@@ -1889,7 +1889,7 @@ See you soon!
     }
     fType.addEventListener('change', () => {
       applyTypeUI();
-      if (!editingId) fPrice.value = defaultPriceFor(fType.value);
+      fPrice.value = defaultPriceFor(fType.value) || '';
       updatePriceHint();
     });
 
@@ -1913,7 +1913,7 @@ See you soon!
       fDate1.value = item.date1 || '';
       fDate2.value = item.date2 || '';
       fTime.value = item.time || '';
-      fPrice.value = item.price;
+      fPrice.value = defaultPriceFor(item.type) || item.price;
       updatePriceHint();
       saveBtn.textContent = '💾 Save Changes';
       formTitle.textContent = '✏️ Edit Class';
@@ -1929,12 +1929,14 @@ See you soon!
       const info = TYPE_INFO[type];
       const date1 = fDate1.value;
       const date2 = info.paired ? fDate2.value : '';
-      const price = Number(fPrice.value);
+      // Legacy price field, kept for compatibility: the class type's current Class Pricing price.
+      // The website itself always uses settings/publicPricing for these class types.
+      const price = Number(defaultPriceFor(type) || (editingId ? fPrice.value : 0));
 
       if (!date1) return msg('Pick a class date.', 'err');
       if (info.paired && !date2) return msg('Pick the Day 2 date.', 'err');
       if (info.paired && date2 < date1) return msg('Day 2 must be on or after Day 1.', 'err');
-      if (!price || price <= 0) return msg('Enter a valid price.', 'err');
+      if (!price || price <= 0) return msg('Save 💲 Class Pricing first — class tuition comes from there.', 'err');
 
       const endDate = (date2 && date2 > date1) ? date2 : date1;
       const data = { type, date1, date2, time: fTime.value, price, endDate, updatedAt: serverTimestamp() };
@@ -1974,7 +1976,7 @@ See you soon!
         return '<div class="class-row' + (past ? ' is-past' : '') + '">' +
           '<div class="cr-info">' +
             '<div class="cr-date">' + dateStr + (timeStr ? ' · ' + timeStr : '') + (past ? ' · ended' : '') + '</div>' +
-            '<div class="cr-meta">' + info.label + ' · $' + it.price + (past ? '' : classOnlineNote(it)) + '</div>' +
+            '<div class="cr-meta">' + info.label + classPriceLabel(it, past) + '</div>' +
           '</div>' +
           '<div class="cr-actions">' +
             '<button class="cr-edit" data-edit="' + it.id + '" title="Edit">✏️</button>' +
@@ -2766,35 +2768,34 @@ See you soon!
     const money = v => '$' + (Number.isInteger(v) ? v : v.toFixed(2));
     const shortLink = u => String(u || '').replace(/^https:\/\//, '');
 
-    // Note for a scheduled class that can't be booked online at its listed price.
-    function classOnlineNote(it) {
+    // Price shown for a scheduled class in the list: its type's current Class Pricing price (the
+    // class record's own legacy price is not used by the website).
+    function classPriceLabel(it, past) {
       const f = REGULAR_FIELDS.find(x => x.type === it.type);
-      if (!f || !savedPricing) return '';
-      const b = bookableFromSaved(f);
-      if (b == null) return ' · ⚠️ online booking paused (Stripe amount not confirmed)';
-      if (Number(it.price) !== b) return ' · ⚠️ not bookable online (class ' + money(Number(it.price)) + ' ≠ current ' + money(b) + ')';
-      return '';
+      if (!f || !savedPricing) return ' · $' + it.price;
+      const w = savedNum(f.field);
+      if (w == null) return '';
+      return ' · ' + money(w) + (past || bookableFromSaved(f) != null ? '' : ' · ⚠️ online booking paused (Stripe amount not confirmed)');
     }
 
-    // Warning on the schedule form when a class price won't match the current online price.
+    // Schedule form note: tuition is set per class type in Class Pricing, not per class.
     function updatePriceHint() {
       const hint = $('fPriceHint');
       const f = REGULAR_FIELDS.find(x => x.type === fType.value);
-      const v = parsePrice(fPrice.value);
-      if (!f || v == null || !savedPricing) { hint.textContent = ''; hint.style.color = ''; return; }
+      if (!f || !savedPricing || savedNum(f.field) == null) {
+        hint.textContent = savedPricing === null ? 'Set this class type’s price in 💲 Class Pricing.' : '';
+        hint.style.color = '#b45309';
+        return;
+      }
       const b = bookableFromSaved(f);
       if (b == null) {
-        hint.textContent = "⚠️ Online booking for this class type is paused until its website price and confirmed Stripe amount match (Class Pricing). This class will show “Text to Reserve”.";
+        hint.textContent = "⚠️ Online booking for this class type is paused until its website price and confirmed Stripe amount match (Class Pricing). Classes will show “Text to Reserve”.";
         hint.style.color = '#b45309';
-      } else if (v === b) {
-        hint.textContent = '✓ Matches the current online price (' + money(b) + ') — this class can be booked online.';
-        hint.style.color = '#15803d';
       } else {
-        hint.textContent = '⚠️ ' + money(v) + " doesn't match the current online price (" + money(b) + '). This class will show “Text to Reserve” instead of online booking.';
-        hint.style.color = '#b45309';
+        hint.textContent = '✓ Every ' + f.label + ' class shows and books at ' + money(b) + ' (from Class Pricing — change it there, not per class).';
+        hint.style.color = '#15803d';
       }
     }
-    fPrice.addEventListener('input', updatePriceHint);
 
     function renderPricingRows() {
       $('cpRows').innerHTML = PRICE_FIELDS.map(f => {
@@ -2900,12 +2901,11 @@ See you soon!
       if (unsubPricing) return;
       unsubPricing = onSnapshot(doc(db, 'settings', 'pricing'),
         snap => {
-          const prevDefault = defaultPriceFor(fType.value);
           savedPricing = snap.exists() ? snap.data() : null;
           if (!cpDirty) renderPricingRows();
           showPricingMeta();
-          // A new (not yet edited) class picks up the saved default price.
-          if (!editingId && String(fPrice.value) === String(prevDefault)) fPrice.value = defaultPriceFor(fType.value);
+          // The form's tuition always mirrors Class Pricing for the selected type.
+          fPrice.value = defaultPriceFor(fType.value) || (editingId ? fPrice.value : '');
           updatePriceHint();
           if (currentItems.length) renderList();
         },

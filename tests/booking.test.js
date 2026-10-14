@@ -27,7 +27,8 @@ const STANDINS = {
   TESTccl: { type: 'ccl', date1: iso(12), date2: iso(13), endDate: iso(13), time: '09:30', price: 175 },
   TESTrenewal: { type: 'renewal', date1: iso(15), date2: '', endDate: iso(15), time: '18:00', price: 125 },
   TESTwomens: { type: 'womens', date1: iso(18), date2: '', endDate: iso(18), time: '12:00', price: 125 },
-  TESTmismatch: { type: 'ccl', date1: iso(20), date2: iso(21), endDate: iso(21), time: '10:00', price: 185 },
+  TESTold: { type: 'ccl', date1: iso(20), date2: iso(21), endDate: iso(21), time: '10:00', price: 150 },   // stale legacy price
+  TESTnoprice: { type: 'womens', date1: iso(22), date2: '', endDate: iso(22), time: '12:00' },          // no legacy price at all
   TESTpast: { type: 'ccl', date1: iso(-10), date2: iso(-9), endDate: iso(-9), time: '10:00', price: 175 },
   TESTprivate: { type: 'private', date1: iso(8), date2: '', endDate: iso(8), time: '10:00', price: 250 }
 };
@@ -129,7 +130,7 @@ const STANDINS = {
   ok(/Price \$175/.test(sum) && (await page.$$('.ack-check')).length === 7, 'to=/c=/price=/type= in the URL change nothing on the page');
   u = await pay(page, state);
   ok(u.origin + u.pathname === LINK.ccl, 'checkout still the regular CCL link (Stripe destination not changeable)');
-  for (const [id, why] of [['TESTmismatch', 'listed price differs from the approved checkout price'], ['TESTpast', 'class already over'], ['TESTprivate', 'class type has no approved online checkout'], ['TESTnope', 'unknown class'], ['..%2Fetc', 'malformed id']]) {
+  for (const [id, why] of [['TESTpast', 'class already over'], ['TESTprivate', 'class type has no approved online checkout'], ['TESTnope', 'unknown class'], ['..%2Fetc', 'malformed id']]) {
     await page.goto(BASE + '/reserve?class=' + id);
     await page.waitForSelector('#errorFlow:not([style*="none"])', { timeout: 15000 }).catch(() => {});
     ok(/isn't available for online booking/.test(await page.textContent('#errorFlow')) && !(await page.isVisible('#ackFlow')), 'refused: ' + why);
@@ -138,45 +139,90 @@ const STANDINS = {
   ok(state.errors.length === 0, 'no JavaScript errors ' + state.errors.join(' | '));
   await ctx.close();
 
+  // The class record's legacy price never decides the tuition: settings/publicPricing does.
+  console.log('Central pricing: an old class-record price does not override it');
+  ({ ctx, page, state } = await ctxWith());
+  for (const [id, label, price] of [['TESTold', 'CCL record still saying $150', 175], ['TESTnoprice', "Women's record with no price at all", 125]]) {
+    await page.goto(BASE + '/reserve?class=' + id);
+    sum = await summary(page);
+    ok(new RegExp('Price \\$' + price + '\\b').test(sum) && !/Price \$150/.test(sum), `${label}: shows and books at the central $${price}`);
+  }
+  u = await pay(page, state);
+  ok(u.origin + u.pathname === LINK.womens, "…through the fixed Women's Stripe link");
+  await ctx.close();
+
+  const homeCards = async page => {
+    await page.goto(BASE + '/');
+    await page.waitForFunction(() => document.querySelectorAll('#upcomingGrid .uc-card[data-dynamic]').length > 0, null, { timeout: 20000 });
+    return page.$$eval('#upcomingGrid .uc-card[data-dynamic]', els => els.map(e => ({ text: e.innerText.replace(/\s+/g, ' '), title: e.querySelector('.uc-title').textContent, price: e.querySelector('.uc-price') ? e.querySelector('.uc-price').textContent : '', link: e.querySelector('a.btn-reserve') && e.querySelector('a.btn-reserve').getAttribute('href'), textBtn: !!e.querySelector('button[data-sms]') })));
+  };
+  const recordPrices = async page => Object.fromEntries(await Promise.all((await homeCards(page)).filter(c => c.link).map(async c => {
+    const id = new URLSearchParams(c.link.split('?')[1]).get('class');
+    return [id, (await page.evaluate(id => window.KAT_BOOKING.loadClass(id), id)).price];
+  })));
+
   // Website price ≠ confirmed Stripe amount → public price null → online booking paused
   console.log('Price mismatch pauses online booking');
   PUB.current = { ...PUB_MATCHED, ccl16: null };
   ({ ctx, page, state } = await ctxWith());
-  await page.goto(BASE + '/');
-  await page.waitForFunction(() => document.querySelectorAll('#upcomingGrid .uc-card[data-dynamic]').length > 0, null, { timeout: 20000 });
-  let cs = await page.$$eval('#upcomingGrid .uc-card[data-dynamic]', els => els.map(e => ({ text: e.innerText.replace(/\s+/g, ' '), link: !!e.querySelector('a.btn-reserve'), textBtn: !!e.querySelector('button[data-sms]') })));
+  let cs = await homeCards(page);
   let c17 = cs.find(c => /Oct 17/.test(c.text)), c24 = cs.find(c => /Oct 24/.test(c.text));
-  ok(c17 && !c17.link && c17.textBtn, 'CCL card falls back to "Text to Reserve" while CCL is paused');
-  ok(c24 && c24.link, "Women's (still matched) keeps \"Reserve Your Spot\"");
-  await page.goto(BASE + '/reserve?class=TESTccl');
-  await page.waitForSelector('#errorFlow:not([style*="none"])', { timeout: 15000 }).catch(() => {});
-  ok(/isn't available for online booking/.test(await page.textContent('#errorFlow')) && !(await page.isVisible('#ackFlow')), '/reserve refuses the $175 CCL class while paused');
+  ok(c17 && !c17.link && c17.textBtn && c17.price === '', 'CCL card: "Text to Reserve", and no price shown (no stale amount) while CCL is paused');
+  ok(c24 && c24.link && c24.price === '$125', "Women's (still matched) keeps \"Reserve Your Spot\" at $125");
+  for (const id of ['TESTccl', 'TESTold']) {
+    await page.goto(BASE + '/reserve?class=' + id);
+    await page.waitForSelector('#errorFlow:not([style*="none"])', { timeout: 15000 }).catch(() => {});
+    ok(/isn't available for online booking/.test(await page.textContent('#errorFlow')) && !(await page.isVisible('#ackFlow')), `/reserve refuses ${id} while CCL is paused (no checkout)`);
+  }
+  ok(!state.stripe.length, 'no Stripe checkout opened while paused');
   await page.goto(BASE + '/reserve?class=TESTrenewal');
   sum = await summary(page);
   ok(/Price \$125/.test(sum), 'other classes unaffected (Renewal still $125)');
   await ctx.close();
 
-  // Nora confirms Stripe now charges $185 and saves → public ccl16 185
-  console.log('New confirmed price ($185) resumes online booking');
-  PUB.current = { ...PUB_MATCHED, ccl16: 185 };
+  // Nora changes the regular prices, updates each Stripe link and confirms → publicPricing changes.
+  // No class record is edited: every upcoming class of that type follows automatically.
+  console.log('New confirmed prices (CCL $185, Renewal $135, Women\'s $110) apply to every upcoming class');
+  PUB.current = { ...PUB_MATCHED, ccl16: 185, renewal3: 135, womens: 110 };
   ({ ctx, page, state } = await ctxWith());
-  await page.goto(BASE + '/');
-  await page.waitForFunction(() => document.querySelectorAll('#upcomingGrid .uc-card[data-dynamic]').length > 0, null, { timeout: 20000 });
-  cs = await page.$$eval('#upcomingGrid .uc-card[data-dynamic]', els => els.map(e => ({ text: e.innerText.replace(/\s+/g, ' '), link: !!e.querySelector('a.btn-reserve') })));
+  const before = await recordPrices(page);
+  cs = await homeCards(page);
+  const want = { '16-Hour CCL': '$185', 'CCL Renewal': '$135', "Women's": '$110' };
+  const regularCards = cs.filter(c => Object.keys(want).some(k => c.title.includes(k)));
+  ok(regularCards.length > 0 && regularCards.every(c => c.link && c.price === want[Object.keys(want).find(k => c.title.includes(k))]),
+     'every upcoming CCL / Renewal / Women\'s card shows the new central price and "Reserve Your Spot": ' + regularCards.map(c => c.title.replace(/\s+/g, ' ') + ' ' + c.price).join(', '));
+  ok(Object.values(before).every(p => p === 175 || p === 125), 'the class records themselves still hold their old prices (not rewritten): ' + JSON.stringify(before));
+  for (const [id, price, link] of [['TESTccl', 185, LINK.ccl], ['TESTold', 185, LINK.ccl], ['TESTrenewal', 135, LINK.renewal], ['TESTwomens', 110, LINK.womens]]) {
+    await page.goto(BASE + '/reserve?class=' + id);
+    sum = await summary(page);
+    ok(new RegExp('Price \\$' + price + '\\b').test(sum) && new RegExp('Continue to Secure Payment · \\$' + price + '\\b').test(await page.textContent('#continueBtn')), `${id} (record $${STANDINS[id].price}) shows and books at $${price}`);
+    u = await pay(page, state);
+    ok(u.origin + u.pathname === link, `  same fixed trusted Stripe link (${link.slice(-6)})`);
+    await page.goto(BASE + '/terms');   // read site storage from a site page, not the Stripe stand-in
+    const pend = await page.evaluate(() => JSON.parse(localStorage.getItem('katcci_pending_purchase') || 'null'));
+    ok(pend && pend.value === price, `  pending conversion value is the central $${price}`);
+  }
+  // Real schedule: clicking the Oct 17 card goes to checkout at $185 too.
+  cs = await homeCards(page);
   c17 = cs.find(c => /Oct 17/.test(c.text));
-  ok(c17 && !c17.link, 'scheduled class still listed at $175 is not bookable online at $185 (Nora updates its price)');
-  await page.goto(BASE + '/reserve?class=TESTmismatch');
+  await page.goto(BASE + c17.link);
   sum = await summary(page);
-  ok(/Price \$185/.test(sum) && /Continue to Secure Payment · \$185/.test(await page.textContent('#continueBtn')), '$185 class now books online at $185');
-  u = await pay(page, state);
-  ok(u.origin + u.pathname === LINK.ccl, 'same fixed CCL Stripe link used (URL never changes)');
-  await page.goto(BASE + '/terms');   // read site storage from a site page, not the Stripe stand-in
-  const pend = await page.evaluate(() => JSON.parse(localStorage.getItem('katcci_pending_purchase') || 'null'));
-  ok(pend && pend.value === 185 && pend.kind === 'class:ccl16', 'pending conversion value is the confirmed $185');
-  await page.goto(BASE + '/reserve?class=TESTccl');
-  await page.waitForSelector('#errorFlow:not([style*="none"])', { timeout: 15000 }).catch(() => {});
-  ok(/isn't available for online booking/.test(await page.textContent('#errorFlow')), 'a class still listed at $175 is refused');
+  ok(/Price \$185/.test(sum), 'real Oct 17–18 CCL class (record $175, unedited) reserves at $185');
+  ok(!state.stripe.some(x => PROMO_LINKS.some(p => x.startsWith(p))), 'never a promotional checkout link');
+  ok(state.errors.length === 0, 'no JavaScript errors ' + state.errors.join(' | '));
   await ctx.close();
+
+  console.log('Promotions are separate');
+  ({ ctx, page, state } = await ctxWith());
+  for (const [id, price, link] of [['ccl-2026-10-17', 160, PROMO_LINKS[0]], ['womens-2026-10-24', 100, PROMO_LINKS[1]]]) {
+    await page.goto(BASE + '/reserve?promo=' + id);
+    sum = await summary(page);
+    ok(new RegExp('Promotional price \\$' + price + '\\b').test(sum), `promo ${id}: still $${price} while regular prices are 185/135/110`);
+    u = await pay(page, state);
+    ok(u.origin + u.pathname === link, '  promo Stripe link unchanged');
+  }
+  await ctx.close();
+  PUB.current = PUB_MATCHED;
 
   // Public pricing unreadable → no regular online booking (fail closed)
   console.log('Public pricing unavailable');

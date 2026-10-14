@@ -81,7 +81,7 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   ok(await page.$$eval('#cpCard input', els => els.every(e => e.type !== 'url' && !/stripe/i.test(e.value))), 'no editable Stripe URL anywhere in Class Pricing');
   ok(await page.$$eval('.lc[data-key="ccl16"] [data-field=link], .lc[data-key="renewal3"] [data-field=link], .lc[data-key="womens"] [data-field=link]', els => els.length === 3 && els.every(e => e.readOnly)), 'payment helper: regular Stripe links read-only');
   ok(/Last saved .* by nora@katcci\.com/.test(await txt(page, '#cpMeta')), 'shows who last saved');
-  ok(await val(page, '#fPrice') === '175' && /Matches the current online price \(\$175\)/.test(await txt(page, '#fPriceHint')), 'new-class form defaults to $175 with a ✓ hint');
+  ok(await val(page, '#fPrice') === '175' && /Every 16-Hour CCL Certification class shows and books at \$175/.test(await txt(page, '#fPriceHint')) && await page.$eval('#fPrice', e => e.readOnly), 'new-class form: tuition $175 from Class Pricing (read-only, not set per class)');
   let sms = await copySms(page, 'ccl16');
   ok(sms.clip === PAY_CCL('$175') && sms.header === '$175' && !sms.missing, 'Copy SMS (CCL) uses the saved $175');
 
@@ -140,9 +140,11 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   sms = await copySms(page, 'ccl16');
   ok(sms.clip === PAY_CCL('$185') && sms.header === '$185' && !sms.missing, 'Copy SMS (CCL) resumes with $185 (amount and "$185 covers your 16 hours"), same fixed link');
   ok(await page.evaluate(() => [window.KAT_BOOKING.isBookable({ type: 'ccl', price: 185, date1: '2030-03-07', endDate: '2030-03-08' }, window.KAT_PUBLIC_PRICING),
-    window.KAT_BOOKING.isBookable({ type: 'ccl', price: 175, date1: '2030-03-07', endDate: '2030-03-08' }, window.KAT_PUBLIC_PRICING)].join()) === 'true,false', 'booking.js: $185 CCL class bookable online; a $175 class is not');
-  ok((await classNotes(page)).some(t => /CCL.*\$175.*not bookable online \(class \$175 ≠ current \$185\)/.test(t)), 'class list flags existing $175 CCL classes (edit their price to resume online booking)');
-  ok(JSON.stringify(await classes(page)) === JSON.stringify(classesBefore), 'existing scheduled classes are NOT repriced automatically');
+    window.KAT_BOOKING.isBookable({ type: 'ccl', price: 175, date1: '2030-03-07', endDate: '2030-03-08' }, window.KAT_PUBLIC_PRICING),
+    window.KAT_BOOKING.entryFor({ type: 'ccl', price: 175 }, window.KAT_PUBLIC_PRICING).price].join()) === 'true,true,185', 'booking.js: every CCL class books at $185, whatever its record says');
+  const notes = await classNotes(page);
+  ok(notes.filter(t => /CCL/.test(t)).length > 0 && notes.filter(t => /CCL/.test(t)).every(t => /\$185/.test(t) && !/\$175|⚠️/.test(t)), 'class list shows every CCL class at $185, no warnings (nothing to edit): ' + notes.filter(t => /CCL/.test(t)).join(' | '));
+  ok(JSON.stringify(await classes(page)) === JSON.stringify(classesBefore), 'class records are NOT rewritten (legacy price fields untouched): ' + JSON.stringify(classesBefore));
 
   console.log('Other classes and Private');
   await page.fill('#cp_renewal3', '130.50');
@@ -167,10 +169,12 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   await page.selectOption('#fType', 'renewal');
   ok(await val(page, '#fPrice') === '130.5', 'Renewal new class defaults to 130.5');
   await page.selectOption('#fType', 'ccl');
-  ok(await val(page, '#fPrice') === '185' && /Matches the current online price \(\$185\)/.test(await txt(page, '#fPriceHint')), 'CCL new class defaults to 185 ✓');
-  await page.fill('#fPrice', '175');
-  ok(/doesn't match the current online price \(\$185\)/.test(await txt(page, '#fPriceHint')) && /Text to Reserve/.test(await txt(page, '#fPriceHint')), 'a $175 CCL class warns it will show Text to Reserve');
-  await page.fill('#fPrice', '185');
+  ok(await val(page, '#fPrice') === '185' && /Every 16-Hour CCL Certification class shows and books at \$185/.test(await txt(page, '#fPriceHint')), 'CCL tuition shows $185 from Class Pricing');
+  ok(await page.$eval('#fPrice', e => e.readOnly), 'tuition cannot be typed per class');
+  const oldId = Object.keys(classesBefore).find(k => classesBefore[k] === 175);
+  await tap(page, `[data-edit="${oldId}"]`);
+  ok(await val(page, '#fPrice') === '185', 'editing an existing class (record $175) shows the central $185');
+  await tap(page, '#cancelBtn');
   await page.fill('#fDate1', '2030-03-07'); await page.fill('#fDate2', '2030-03-08');
   await page.$eval('#saveBtn', e => e.click());
   await page.waitForFunction(() => /added/.test(document.getElementById('mgrMsg').textContent));
@@ -255,15 +259,13 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   page = await ctx.newPage();
   await page.goto(SITE + '/');
   await page.waitForFunction(() => document.querySelectorAll('#upcomingGrid .uc-card[data-dynamic], #upcomingGrid .uc-empty').length > 0, null, { timeout: 20000 });
-  const cards = await page.$$eval('#upcomingGrid .uc-card[data-dynamic]', els => els.map(e => ({ price: e.querySelector('.uc-price').textContent, link: e.querySelector('a.btn-reserve') && e.querySelector('a.btn-reserve').getAttribute('href') })));
-  let checked = 0;
-  for (const c of cards.filter(c => c.link)) {
-    const id = new URLSearchParams(c.link.split('?')[1]).get('class');
-    const rec = await page.evaluate(id => window.KAT_BOOKING.loadClass(id), id);
-    ok(rec && c.price === '$' + rec.price, `public card shows its scheduled class's own price (${c.price})`);
-    checked++;
-  }
-  if (!checked) console.log('  (no upcoming bookable classes on the live schedule to compare)');
+  // Live data: each card's price is its type's published central price (none shown when paused).
+  const cards = await page.$$eval('#upcomingGrid .uc-card[data-dynamic]', els => els.map(e => ({ title: e.querySelector('.uc-title').textContent, price: e.querySelector('.uc-price') ? e.querySelector('.uc-price').textContent : '', link: !!e.querySelector('a.btn-reserve') })));
+  const livePub = await page.evaluate(() => window.KAT_BOOKING.loadPublicPricing());
+  const TYPE_KEY = [['16-Hour CCL', 'ccl16'], ['CCL Renewal', 'renewal3'], ["Women's", 'womens']];
+  const expectFor = c => { const k = (TYPE_KEY.find(([t]) => c.title.includes(t)) || [])[1]; const v = k && livePub ? livePub[k] : null; return typeof v === 'number' ? '$' + v : ''; };
+  ok(cards.length > 0 && cards.every(c => c.price === expectFor(c) && c.link === !!expectFor(c)),
+     'live homepage cards follow settings/publicPricing (' + JSON.stringify(livePub) + '): ' + cards.map(c => c.title + ' ' + (c.price || 'no price / Text to Reserve')).join(', '));
 
   // Homepage Private card: reads settings/publicPricing, else keeps the $250 fallback.
   const priv = () => page.$eval('#ucPrivatePrice', e => e.textContent);

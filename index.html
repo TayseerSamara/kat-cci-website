@@ -2745,6 +2745,13 @@ header {
       return '<button class="btn-sms" data-sms="' + esc(sms) + '" data-classlabel="' + esc(t.formLabel || '') + '">💬 Text to Reserve</button>';
     }
 
+    // Tuition shown on a class card: the class type's current published price (settings/publicPricing),
+    // never the class record's legacy price. No published price → no amount shown (Text to Reserve).
+    function cardPrice(c) {
+      const v = window.KAT_BOOKING ? window.KAT_BOOKING.bookablePrice(c.type, publicPricing) : null;
+      return v == null ? '' : '<div class="uc-price">$' + (Number.isInteger(v) ? v : v.toFixed(2)) + '</div>';
+    }
+
     function cardHTML(c) {
       const t = TYPES[c.type];
       if (!t) return '';
@@ -2770,7 +2777,7 @@ header {
           '<small>' + (timeStr ? esc(timeStr) + ' · ' : '') + esc(t.dayLabel) + '</small></div>' +
         '<div class="uc-title">' + esc(t.title) + '</div>' +
         '<div class="uc-duration">' + esc(t.duration) + '</div>' +
-        '<div class="uc-price">$' + esc(c.price) + '</div>' +
+        cardPrice(c) +
         (t.fineprint ? '<div class="uc-fineprint">' + t.fineprint + '</div>' : '') +
         features +
         reserveButton(c, sms, t) +

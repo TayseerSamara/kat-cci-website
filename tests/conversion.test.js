@@ -128,14 +128,18 @@ const STANDINS = {
     await ctx.close();
   }
 
-  console.log('Regular price changed to $185 (Stripe updated and confirmed in Class Pricing)');
-  PUB.current = { ...PUB_MATCHED, ccl16: 185 };
+  console.log('Regular prices changed to CCL $185 / Renewal $135 / Women\'s $110 (Stripe updated and confirmed)');
+  PUB.current = { ...PUB_MATCHED, ccl16: 185, renewal3: 135, womens: 110 };
   for (const [label, path, value] of [
-    ['Scheduled $185 CCL class', '/reserve?class=TESTccl185', 185],
+    ['Scheduled CCL class whose record still says $175', '/reserve?class=TESTccl', 185],
+    ['Scheduled CCL class whose record says $185', '/reserve?class=TESTccl185', 185],
+    ['Scheduled Renewal class (record $125)', '/reserve?class=TESTrenewal', 135],
+    ["Scheduled Women's class (record $125)", '/reserve?class=TESTwomens', 110],
+    ["Staff-texted Women's link", '/reserve?c=womens&to=' + encodeURIComponent(REG.womens), 110],
     ['Staff-texted CCL link', '/reserve?c=ccl16&to=' + encodeURIComponent(REG.ccl), 185],
     ['Promotional CCL (fixed promo price unchanged)', '/reserve?promo=ccl-2026-10-17', 160],
     ["Promotional Women's (unchanged)", '/reserve?promo=womens-2026-10-24', 100],
-    ['Renewal (unchanged)', '/reserve?c=renewal3&to=' + encodeURIComponent(REG.renewal), 125]]) {
+    ['Staff-texted Renewal link', '/reserve?c=renewal3&to=' + encodeURIComponent(REG.renewal), 135]]) {
     ({ ctx, page, errors } = await fresh());
     await checkout(page, path);
     const id = sid();

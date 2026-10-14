@@ -1,9 +1,10 @@
 // Regular (non-promotional) online booking for scheduled classes.
 // Homepage class cards link to /reserve?class=<scheduled class id>. The reserve page loads that
-// class record (date, time, type) from the public schedule. The Stripe checkout URL comes ONLY from
-// the table below — never from the URL or Firestore. The price comes from settings/publicPricing,
-// which publishes a regular price only when the saved website price equals the Stripe amount an
-// editor has confirmed in Class Pricing (enforced by the Firestore rules). Promotions live in
+// class record (type, dates, time) from the public schedule. The Stripe checkout URL comes ONLY from
+// the table below — never from the URL or Firestore. The tuition comes ONLY from settings/publicPricing
+// (one price per class type), which publishes a regular price only when the saved website price equals
+// the Stripe amount an editor has confirmed in Class Pricing (enforced by the Firestore rules). A class
+// record's own legacy `price` field is ignored for these fixed-price types. Promotions live in
 // promos.js and are separate. Needs promos.js loaded first for checkoutUrl (ad attribution).
 (function () {
   // Trusted approved Stripe Payment Links (fixed), keyed by schedule class type.
@@ -85,12 +86,12 @@
     return validPrice(v) ? v : null;
   }
 
-  // Online booking only when the scheduled class's listed price equals the current bookable price,
-  // so a customer is never charged a different amount than advertised.
+  // Online booking at the class type's current published price (the class record's legacy price is
+  // not used). No published price (website ≠ confirmed Stripe amount, or unreadable) → not bookable.
   function entryFor(cls, pub) {
     var e = cls && REGULAR[cls.type];
     var price = cls ? bookablePrice(cls.type, pub) : null;
-    if (!e || price == null || Number(cls.price) !== price) return null;
+    if (!e || price == null) return null;
     return { classKey: e.classKey, title: e.title, checkoutUrl: e.checkoutUrl, paired: e.paired, info: e.info, price: price };
   }
 
