@@ -547,6 +547,17 @@
 
     .rh-search { margin-bottom: 6px; }
 
+    /* Class Pricing */
+    .cp-row { border-bottom: 1px solid #eee; padding: 4px 0 10px; margin-bottom: 10px; }
+    .cp-row:last-child { border-bottom: none; margin-bottom: 0; }
+    .cp-name { font-weight: 800; color: var(--navy); font-size: .92rem; margin-bottom: 6px; }
+    .cp-price { display: flex; align-items: center; gap: 6px; }
+    .cp-price span { font-weight: 800; color: var(--navy); }
+    .cp-price input { max-width: 160px; }
+    .cp-stripe { font-size: .78rem; color: var(--text-light); line-height: 1.5; word-break: break-all; }
+    .cp-ok { font-size: .8rem; font-weight: 700; color: #15803d; margin-top: 4px; }
+    .lc-row input.cp-invalid { border-color: #dc2626; }
+
     .rq-text {
       background: rgba(34,34,34,.04);
       border-radius: 8px;
@@ -953,6 +964,7 @@
         <div class="lc-row">
           <label>Price for this class ($)</label>
           <input type="number" id="fPrice" min="0" step="5" inputmode="numeric">
+          <div class="mgr-hint" id="fPriceHint"></div>
         </div>
         <div class="lc-actions">
           <button class="btn btn-copy" id="saveBtn">➕ Add Class</button>
@@ -969,6 +981,21 @@
           <p class="mgr-hint">Loading…</p>
         </div>
         <p class="mgr-hint" style="margin-top:10px;">Past classes drop off the public site automatically. Delete them here to tidy the list.</p>
+      </div>
+
+      <div class="section-divider">Class Pricing</div>
+
+      <div class="lc" id="cpCard">
+        <div class="lc-head">
+          <span class="lc-title">💲 Class Pricing</span>
+        </div>
+        <p class="mgr-hint" style="margin-bottom:12px;">Regular website prices. New scheduled classes start with these prices. Changing a price here doesn't change classes already on the schedule, and doesn't change Stripe.</p>
+        <div id="cpRows"></div>
+        <div class="lc-actions">
+          <button class="btn btn-copy" id="cpSaveBtn">💾 Save Pricing</button>
+        </div>
+        <div class="mgr-msg" id="cpMsg"></div>
+        <p class="mgr-hint" id="cpMeta" style="margin-top:6px;"></p>
       </div>
 
       <div class="section-divider">Student Roster</div>
@@ -1650,6 +1677,9 @@ See you soon!
     });
   </script>
 
+  <!-- Approved regular Stripe checkouts (trusted mapping, shared with the public booking flow) -->
+  <script src="booking.js"></script>
+
   <!-- ═══════════════ SCHEDULE MANAGER (Firebase) ═══════════════ -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
@@ -1683,9 +1713,9 @@ See you soon!
     const ALLOWED = ['nora@katcci.com', 'tony@midwayspeedpark.com', 'tony@katcci.com'];
 
     const TYPE_INFO = {
-      ccl:     { label: '16-Hour CCL Certification', paired: true,  defaultPrice: 175 },
-      renewal: { label: '3-Hour Renewal',            paired: false, defaultPrice: 125 },
-      womens:  { label: "Women's Class",             paired: false, defaultPrice: 125 }
+      ccl:     { label: '16-Hour CCL Certification', paired: true },
+      renewal: { label: '3-Hour Renewal',            paired: false },
+      womens:  { label: "Women's Class",             paired: false }
     };
 
     const app = initializeApp(firebaseConfig);
@@ -1756,6 +1786,7 @@ See you soon!
         if (unsubStudents) { unsubStudents(); unsubStudents = null; }
         if (unsubLeads) { unsubLeads(); unsubLeads = null; }
         stopListeningReviews();
+        stopListeningPricing();
         return;
       }
       const email = (user.email || '').toLowerCase();
@@ -1775,6 +1806,7 @@ See you soon!
       startListeningStudents();
       startListeningLeads();
       startListeningReviews();
+      startListeningPricing();
     });
 
     function startListening() {
@@ -1794,7 +1826,8 @@ See you soon!
     }
     fType.addEventListener('change', () => {
       applyTypeUI();
-      if (!editingId) fPrice.value = TYPE_INFO[fType.value].defaultPrice;
+      if (!editingId) fPrice.value = defaultPriceFor(fType.value);
+      updatePriceHint();
     });
 
     function resetForm() {
@@ -1803,7 +1836,8 @@ See you soon!
       fDate2.value = '';
       fTime.value = '';
       applyTypeUI();
-      fPrice.value = TYPE_INFO[fType.value].defaultPrice;
+      fPrice.value = defaultPriceFor(fType.value);
+      updatePriceHint();
       saveBtn.textContent = '➕ Add Class';
       formTitle.textContent = '➕ Add a Class';
       cancelBtn.style.display = 'none';
@@ -1817,6 +1851,7 @@ See you soon!
       fDate2.value = item.date2 || '';
       fTime.value = item.time || '';
       fPrice.value = item.price;
+      updatePriceHint();
       saveBtn.textContent = '💾 Save Changes';
       formTitle.textContent = '✏️ Edit Class';
       cancelBtn.style.display = '';
@@ -2620,9 +2655,171 @@ See you soon!
     resetReviewForm();
     renderQuickReview();
 
+    // ════════ CLASS PRICING ════════
+    // Website prices live in Firestore settings/pricing (editors only). What each regular Stripe
+    // checkout charges comes ONLY from the trusted mapping in booking.js; Firestore never chooses a
+    // price or Stripe link for checkout. Online booking stays refused whenever a class's price
+    // differs from its approved checkout (booking.js isBookable), so a mismatch here can't
+    // charge customers a different amount than shown.
+    const APPROVED = window.KAT_BOOKING ? window.KAT_BOOKING.approvedCheckouts() : {};
+    const PRIVATE_LINK = { price: Number(String(TEMPLATES.private.amount).replace(/[^0-9.]/g, '')), checkoutUrl: DEFAULT_LINKS.private };
+    const PRICE_FIELDS = [
+      { field: 'ccl16',       type: 'ccl',     label: '16-Hour CCL Certification', checkout: APPROVED.ccl },
+      { field: 'renewal3',    type: 'renewal', label: '3-Hour Renewal',            checkout: APPROVED.renewal },
+      { field: 'womens',      type: 'womens',  label: "Women's Class",             checkout: APPROVED.womens },
+      { field: 'privateFrom', type: null,      label: 'Private Training (starting price)', checkout: PRIVATE_LINK, isPrivate: true }
+    ];
+    const MISMATCH_TEXT = '⚠️ Website price and Stripe checkout price do not match. Online booking for this class should not be published until the Stripe link is updated.';
+    let savedPricing = null;          // settings/pricing as stored (null = not saved yet / unavailable)
+    let unsubPricing = null;
+    let cpDirty = false;              // unsaved edits in the pricing form
+
+    // Prices in effect: saved settings, else the approved checkout amounts.
+    function effectivePricing() {
+      const p = {};
+      PRICE_FIELDS.forEach(f => {
+        const v = savedPricing && savedPricing[f.field];
+        p[f.field] = (typeof v === 'number' && v > 0) ? v : f.checkout.price;
+      });
+      return p;
+    }
+    function defaultPriceFor(type) {
+      const f = PRICE_FIELDS.find(x => x.type === type);
+      return f ? effectivePricing()[f.field] : '';
+    }
+    // Positive, at most 2 decimals, no blanks, no exponent notation.
+    function parsePrice(str) {
+      const s = String(str == null ? '' : str).trim();
+      if (!/^\d{1,5}(\.\d{1,2})?$/.test(s)) return null;
+      const v = Number(s);
+      return v > 0 ? v : null;
+    }
+    const money = v => '$' + (Number.isInteger(v) ? v : v.toFixed(2));
+    const shortLink = u => String(u || '').replace(/^https:\/\//, '');
+
+    // Warning on the schedule form when a class price won't match its online checkout.
+    function updatePriceHint() {
+      const hint = $('fPriceHint');
+      const f = PRICE_FIELDS.find(x => x.type === fType.value);
+      const v = parsePrice(fPrice.value);
+      if (!f || v == null) { hint.textContent = ''; hint.style.color = ''; return; }
+      if (v === f.checkout.price) {
+        hint.textContent = '✓ Matches the approved ' + money(f.checkout.price) + ' Stripe checkout — this class can be booked online.';
+        hint.style.color = '#15803d';
+      } else {
+        hint.textContent = '⚠️ ' + money(v) + " doesn't match the approved Stripe checkout (" + money(f.checkout.price) + '). This class will show “Text to Reserve” instead of online booking.';
+        hint.style.color = '#b45309';
+      }
+    }
+    fPrice.addEventListener('input', updatePriceHint);
+
+    function renderPricingRows() {
+      const eff = effectivePricing();
+      $('cpRows').innerHTML = PRICE_FIELDS.map(f =>
+        '<div class="cp-row" data-cp="' + f.field + '">' +
+          '<div class="cp-name">' + esc(f.label) + '</div>' +
+          '<div class="lc-row"><label for="cp_' + f.field + '">Website price' + (f.isPrivate ? ' (shown as “From …”)' : '') + '</label>' +
+            '<div class="cp-price"><span>$</span><input type="number" id="cp_' + f.field + '" inputmode="decimal" min="0.01" step="0.01" value="' + eff[f.field] + '"></div></div>' +
+          '<div class="cp-stripe">' + (f.isPrivate ? 'Staff Private payment link (Copy SMS): ' : 'Approved Stripe Payment Link: ') +
+            '<a href="' + esc(f.checkout.checkoutUrl) + '" target="_blank" rel="noopener">' + esc(shortLink(f.checkout.checkoutUrl)) + '</a><br>' +
+            'Expected checkout amount: <strong>' + money(f.checkout.price) + '</strong>' +
+            (f.isPrivate ? ' · Private has no online booking; it stays contact-to-reserve.' : '') + '</div>' +
+          '<div class="cp-ok" hidden></div>' +
+          '<div class="rr-notice warn cp-warn" hidden></div>' +
+        '</div>').join('');
+      PRICE_FIELDS.forEach(f => {
+        $('cp_' + f.field).addEventListener('input', () => { cpDirty = true; checkPricingRow(f); });
+        checkPricingRow(f);
+      });
+    }
+    function checkPricingRow(f) {
+      const row = document.querySelector('[data-cp="' + f.field + '"]');
+      const input = $('cp_' + f.field), ok = row.querySelector('.cp-ok'), warn = row.querySelector('.cp-warn');
+      const v = parsePrice(input.value);
+      input.classList.toggle('cp-invalid', v == null);
+      if (v == null) {
+        ok.hidden = true;
+        warn.textContent = '⚠️ Enter a price above $0 with at most 2 decimal places.';
+        warn.hidden = false;
+      } else if (v !== f.checkout.price) {
+        ok.hidden = true;
+        warn.textContent = MISMATCH_TEXT + ' (Stripe charges ' + money(f.checkout.price) + '; website price ' + money(v) + '.)';
+        warn.hidden = false;
+      } else {
+        warn.hidden = true;
+        ok.textContent = '✓ Matches the Stripe checkout amount';
+        ok.hidden = false;
+      }
+    }
+    function showPricingMeta() {
+      const meta = $('cpMeta');
+      if (!savedPricing) { meta.textContent = 'Not saved yet — showing the current approved checkout prices.'; return; }
+      const d = savedPricing.updatedAt && savedPricing.updatedAt.toDate ? savedPricing.updatedAt.toDate() : null;
+      meta.textContent = 'Last saved' + (d ? ' ' + d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '') +
+        (savedPricing.updatedBy ? ' by ' + savedPricing.updatedBy : '') + '.';
+    }
+    function cpShow(t, kind) { $('cpMsg').textContent = t || ''; $('cpMsg').className = 'mgr-msg' + (kind ? ' ' + kind : ''); }
+
+    function startListeningPricing() {
+      if (unsubPricing) return;
+      unsubPricing = onSnapshot(doc(db, 'settings', 'pricing'),
+        snap => {
+          const prevDefault = defaultPriceFor(fType.value);
+          savedPricing = snap.exists() ? snap.data() : null;
+          if (!cpDirty) renderPricingRows();
+          showPricingMeta();
+          // A new (not yet edited) class picks up the saved default price.
+          if (!editingId && String(fPrice.value) === String(prevDefault)) fPrice.value = defaultPriceFor(fType.value);
+          updatePriceHint();
+        },
+        err => {
+          savedPricing = null;
+          renderPricingRows();
+          $('cpMeta').textContent = '';
+          cpShow(err.code === 'permission-denied'
+            ? "Class Pricing isn't available yet: the Firestore rule for settings/pricing hasn't been deployed. Showing the current approved checkout prices."
+            : 'Could not load pricing: ' + err.message, 'err');
+        }
+      );
+    }
+    function stopListeningPricing() {
+      if (unsubPricing) { unsubPricing(); unsubPricing = null; }
+      savedPricing = null; cpDirty = false;
+    }
+
+    $('cpSaveBtn').onclick = async () => {
+      const values = {};
+      let bad = [];
+      PRICE_FIELDS.forEach(f => {
+        const v = parsePrice($('cp_' + f.field).value);
+        if (v == null) bad.push(f.label); else values[f.field] = v;
+        checkPricingRow(f);
+      });
+      if (bad.length) return cpShow('Not saved — fix the price for: ' + bad.join(', ') + '. Prices must be above $0 with at most 2 decimal places.', 'err');
+      $('cpSaveBtn').disabled = true;
+      try {
+        await setDoc(doc(db, 'settings', 'pricing'), {
+          ...values,
+          updatedAt: serverTimestamp(),
+          updatedBy: staffEmail
+        });
+        cpDirty = false;
+        const mismatched = PRICE_FIELDS.filter(f => values[f.field] !== f.checkout.price).map(f => f.label);
+        cpShow('✓ Pricing saved.' + (mismatched.length ? ' Note: ' + mismatched.join(', ') + " doesn't match its Stripe checkout — see the warning." : ''), 'ok');
+      } catch (e) {
+        cpShow('Save failed: ' + e.message, 'err');
+      } finally {
+        $('cpSaveBtn').disabled = false;
+      }
+    };
+
+    renderPricingRows();
+    showPricingMeta();
+
     // init form defaults
     applyTypeUI();
-    fPrice.value = TYPE_INFO[fType.value].defaultPrice;
+    fPrice.value = defaultPriceFor(fType.value);
+    updatePriceHint();
   </script>
 
 </body>

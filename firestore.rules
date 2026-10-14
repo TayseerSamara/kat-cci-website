@@ -48,6 +48,24 @@ service cloud.firestore {
       allow read, write: if isEditor();
     }
 
+    // Regular class pricing (staff Class Pricing): editors only. Four positive prices, stamped
+    // with the saving editor. Checkout amounts/Stripe links are NOT stored here (they live in code).
+    match /settings/pricing {
+      allow read: if isEditor();
+      allow create, update: if isEditor()
+        && request.resource.data.keys().hasOnly(['ccl16', 'renewal3', 'womens', 'privateFrom', 'updatedAt', 'updatedBy'])
+        && validPrice(request.resource.data.ccl16)
+        && validPrice(request.resource.data.renewal3)
+        && validPrice(request.resource.data.womens)
+        && validPrice(request.resource.data.privateFrom)
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.token.email;
+    }
+
+    function validPrice(p) {
+      return (p is int || p is float) && p > 0 && p < 100000;
+    }
+
     // Review settings (Google review link, default message): editors only.
     match /settings/reviews {
       allow read, write: if isEditor();

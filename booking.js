@@ -100,7 +100,18 @@
     return null;
   }
 
+  // Approved regular checkouts per schedule class type: { ccl: { price, checkoutUrl, title }, ... }.
+  // Used by the staff Class Pricing view to compare website prices with what Stripe charges.
+  function approvedCheckouts() {
+    var out = {};
+    Object.keys(REGULAR).forEach(function (t) {
+      out[t] = { price: REGULAR[t].price, checkoutUrl: REGULAR[t].checkoutUrl, title: REGULAR[t].title };
+    });
+    return out;
+  }
+
   window.KAT_BOOKING = {
+    approvedCheckouts: approvedCheckouts,
     regularPriceFor: regularPriceFor,
     entryFor: entryFor,
     isBookable: isBookable,
