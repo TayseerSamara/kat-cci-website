@@ -110,7 +110,20 @@
     return out;
   }
 
+  // Homepage Private card "From $___". Reads only privateFrom from the public settings/publicPricing
+  // document (no Stripe links or other settings there). Anything missing/invalid shows the $250 fallback.
+  var PRIVATE_FROM_FALLBACK = 250;
+  function showPrivateFrom(data) {
+    var el = document.getElementById('ucPrivatePrice');
+    if (!el) return;
+    var v = data && data.privateFrom;
+    var valid = typeof v === 'number' && isFinite(v) && v > 0 && v < 100000 && Math.abs(Math.round(v * 100) - v * 100) < 1e-9;
+    var n = valid ? v : PRIVATE_FROM_FALLBACK;
+    el.textContent = 'From $' + (Number.isInteger(n) ? n : n.toFixed(2));
+  }
+
   window.KAT_BOOKING = {
+    showPrivateFrom: showPrivateFrom,
     approvedCheckouts: approvedCheckouts,
     regularPriceFor: regularPriceFor,
     entryFor: entryFor,

@@ -32,6 +32,7 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   const txt = (page, sel) => page.$eval(sel, e => e.textContent);
   const row = (page, f) => page.$eval(`[data-cp="${f}"]`, e => ({ text: e.innerText.replace(/\s+/g, ' '), warn: !e.querySelector('.cp-warn').hidden, okMark: !e.querySelector('.cp-ok').hidden }));
   const saved = page => page.evaluate(() => { const p = window.__demoDb.settings.get('pricing'); return p ? { ...p, updatedAt: !!p.updatedAt } : null; });
+  const pub = page => page.evaluate(() => { const p = window.__demoDb.settings.get('publicPricing'); return p ? { ...p } : null; });
   const classes = page => page.evaluate(() => Object.fromEntries([...window.__demoDb.classes.entries()].map(([k, v]) => [k, v.price])));
   const save = async page => { await page.$eval('#cpSaveBtn', e => e.click()); await page.waitForTimeout(500); return txt(page, '#cpMsg'); };
 
@@ -51,6 +52,9 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
     const msg = await save(page);
     ok(/Not saved/.test(msg) && (await saved(page)).ccl16 === 175 && (await row(page, 'ccl16')).warn, `"${bad}" rejected; nothing saved`);
   }
+  await page.fill('#cp_ccl16', '175');
+  await page.fill('#cp_privateFrom', '-1');
+  ok(/Not saved/.test(await save(page)) && JSON.stringify(await pub(page)) === '{"privateFrom":250}', 'invalid Private price: neither settings/pricing nor settings/publicPricing written');
 
   console.log('Editing each price');
   const classesBefore = await classes(page);
@@ -68,6 +72,8 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   ok(s.ccl16 === 185 && s.renewal3 === 130.5 && s.womens === 120 && s.privateFrom === 275 && s.updatedBy === 'tony@katcci.com' && s.updatedAt, 'saved values exact (185 / 130.5 / 120 / 275), stamped with editor and time');
   ok(/doesn't match its Stripe checkout/.test(msg), 'save message points out the Stripe mismatches');
   ok(JSON.stringify(await classes(page)) === JSON.stringify(classesBefore), 'existing scheduled classes NOT repriced: ' + JSON.stringify(classesBefore));
+  const p1 = await pub(page);
+  ok(JSON.stringify(p1) === '{"privateFrom":275}' && p1.privateFrom === s.privateFrom, 'settings/publicPricing = { privateFrom: 275 } only, in sync with settings/pricing');
 
   console.log('New classes use the saved default; checkout safety unchanged');
   await page.selectOption('#fType', 'renewal');
@@ -90,8 +96,9 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
 
   await page.fill('#cp_ccl16', '175');
   ok((await row(page, 'ccl16')).okMark, 'putting CCL back to $175 shows ✓ match');
+  await page.fill('#cp_privateFrom', '262.50');
   await save(page);
-  ok((await saved(page)).ccl16 === 175, 'saved back to $175');
+  ok((await saved(page)).ccl16 === 175 && (await saved(page)).privateFrom === 262.5 && JSON.stringify(await pub(page)) === '{"privateFrom":262.5}', 'saved back to $175; Private 262.50 kept in sync in both documents');
   ok(log.firebase === 0 && log.errors.length === 0, 'demo: zero Firebase requests, no JavaScript errors ' + log.errors.join(' | '));
   await ctx.close();
 
@@ -99,6 +106,9 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   ({ ctx, page, log } = await staffPage('?demo=fresh'));
   ok(await val(page, '#cp_ccl16') === '175' && await val(page, '#cp_renewal3') === '125' && await val(page, '#cp_womens') === '125' && await val(page, '#cp_privateFrom') === '250', 'falls back to the approved checkout prices');
   ok(/Not saved yet/.test(await txt(page, '#cpMeta')) && await val(page, '#fPrice') === '175', '"Not saved yet" note; new class defaults to $175');
+  ok((await pub(page)) === null, 'no public pricing document before the first save');
+  await save(page);
+  ok(JSON.stringify(await pub(page)) === '{"privateFrom":250}' && (await saved(page)).privateFrom === 250, 'first save creates both documents (public copy: privateFrom only)');
   ok(log.firebase === 0 && log.errors.length === 0, 'no Firebase requests, no JavaScript errors');
   await ctx.close();
 
@@ -122,6 +132,31 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
     checked++;
   }
   if (!checked) console.log('  (no upcoming bookable classes on the live schedule to compare)');
+
+  // Homepage Private card: reads settings/publicPricing, else keeps the $250 fallback.
+  const priv = () => page.$eval('#ucPrivatePrice', e => e.textContent);
+  ok(/onSnapshot\(doc\(db, 'settings', 'publicPricing'\)/.test(await (await page.request.get(SITE + '/')).text()), 'homepage reads settings/publicPricing (live)');
+  const live = await priv();
+  ok(/^From \$\d+(\.\d\d)?$/.test(live), 'homepage Private card shows a valid price right now: ' + live);
+  const shown = await page.evaluate(() => {
+    const out = {};
+    const t = d => { window.KAT_BOOKING.showPrivateFrom(d); return document.getElementById('ucPrivatePrice').textContent; };
+    out.v275 = t({ privateFrom: 275 });
+    out.v2755 = t({ privateFrom: 275.5 });
+    out.extra = t({ privateFrom: 300, checkoutUrl: 'https://buy.stripe.com/SECRET', ccl16: 999 });
+    out.missing = t(null);
+    out.empty = t({});
+    out.str = t({ privateFrom: '300' });
+    out.neg = t({ privateFrom: -5 });
+    out.zero = t({ privateFrom: 0 });
+    out.prec = t({ privateFrom: 1.234 });
+    out.huge = t({ privateFrom: 100000 });
+    out.leak = document.body.innerHTML.includes('SECRET');
+    return out;
+  });
+  ok(shown.v275 === 'From $275' && shown.v2755 === 'From $275.50', 'stored value displays: From $275 / From $275.50');
+  ok(shown.extra === 'From $300' && !shown.leak, 'only privateFrom is used; any other fields are ignored and never shown');
+  ok(['missing', 'empty', 'str', 'neg', 'zero', 'prec', 'huge'].every(k => shown[k] === 'From $250'), 'missing / invalid values fall back to From $250');
   await ctx.close();
 
   await browser.close();

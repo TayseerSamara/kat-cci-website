@@ -1697,7 +1697,7 @@ See you soon!
     const { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } =
       demo ? demo.auth : firebaseAuth;
     const { getFirestore, collection, query, orderBy, onSnapshot,
-            addDoc, updateDoc, deleteDoc, setDoc, doc, serverTimestamp } =
+            addDoc, updateDoc, deleteDoc, setDoc, doc, serverTimestamp, writeBatch } =
       demo ? demo.store : firebaseStore;
 
     const firebaseConfig = {
@@ -2798,11 +2798,16 @@ See you soon!
       if (bad.length) return cpShow('Not saved — fix the price for: ' + bad.join(', ') + '. Prices must be above $0 with at most 2 decimal places.', 'err');
       $('cpSaveBtn').disabled = true;
       try {
-        await setDoc(doc(db, 'settings', 'pricing'), {
+        // One batch: settings/pricing and the public copy of the Private "from" price
+        // (settings/publicPricing holds privateFrom only) are saved together or not at all.
+        const batch = writeBatch(db);
+        batch.set(doc(db, 'settings', 'pricing'), {
           ...values,
           updatedAt: serverTimestamp(),
           updatedBy: staffEmail
         });
+        batch.set(doc(db, 'settings', 'publicPricing'), { privateFrom: values.privateFrom });
+        await batch.commit();
         cpDirty = false;
         const mismatched = PRICE_FIELDS.filter(f => values[f.field] !== f.checkout.price).map(f => f.label);
         cpShow('✓ Pricing saved.' + (mismatched.length ? ' Note: ' + mismatched.join(', ') + " doesn't match its Stripe checkout — see the warning." : ''), 'ok');

@@ -57,6 +57,7 @@ const seed = {
   },
   settings: FRESH ? {} : {
     pricing: { ccl16: 175, renewal3: 125, womens: 125, privateFrom: 250, updatedAt: ts(5), updatedBy: 'nora@katcci.com' },
+    publicPricing: { privateFrom: 250 },
     reviews: {
       googleReviewUrl: 'https://g.page/r/DEMO-ONLY/review',
       defaultMessage: 'Hello, thank you for training with KAT CCI! If you have a minute, we would really appreciate a quick Google review. It helps other students find us:\n\n{link}\n\n— Kat CCI',
@@ -119,6 +120,13 @@ function notify(path) {
 const later = (fn, ms = 250) => new Promise((resolve, reject) =>
   setTimeout(() => { try { resolve(fn()); } catch (e) { reject(e); } }, ms));
 
+function setNow(ref, data, opts) {
+  const coll = (db[ref.path] = db[ref.path] || new Map());
+  const base = opts && opts.merge ? (coll.get(ref.id) || {}) : {};
+  coll.set(ref.id, { ...base, ...resolveServerTimestamps(data) });
+  notify(ref.path);
+}
+
 export const store = {
   getFirestore: () => ({ demo: true }),
   collection: (_db, path) => ({ kind: 'collection', path }),
@@ -141,12 +149,16 @@ export const store = {
     return { id };
   }),
 
-  setDoc: (ref, data, opts) => later(() => {
-    const coll = (db[ref.path] = db[ref.path] || new Map());
-    const base = opts && opts.merge ? (coll.get(ref.id) || {}) : {};
-    coll.set(ref.id, { ...base, ...resolveServerTimestamps(data) });
-    notify(ref.path);
-  }),
+  setDoc: (ref, data, opts) => later(() => setNow(ref, data, opts)),
+
+  // All-or-nothing group of set() calls, like Firestore's writeBatch.
+  writeBatch: () => {
+    const ops = [];
+    return {
+      set(ref, data, opts) { ops.push([ref, data, opts]); return this; },
+      commit: () => later(() => { ops.forEach(([ref, data, opts]) => setNow(ref, data, opts)); })
+    };
+  },
 
   updateDoc: (ref, data) => later(() => {
     const coll = db[ref.path] || new Map();

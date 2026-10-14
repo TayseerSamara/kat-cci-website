@@ -2343,7 +2343,7 @@ header {
         </div>
         <div class="uc-title">Private 1-on-1 Class</div>
         <div class="uc-duration">Personalized training, your pace</div>
-        <div class="uc-price">From $250</div>
+        <div class="uc-price" id="ucPrivatePrice">From $250</div>
         <div class="uc-fineprint">+ applicable state fees</div>
         <div class="uc-features">
           <button type="button" class="uc-features-toggle">What's included</button>
@@ -2620,7 +2620,7 @@ header {
   <!-- ═══════════════ LIVE CLASS SCHEDULE (Firestore) ═══════════════ -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp }
+    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc }
       from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
     const firebaseConfig = {
@@ -2807,6 +2807,14 @@ header {
       const btn = e.target.closest('[data-sms]');
       if (btn && typeof openReserve === 'function') openReserve(btn.dataset.sms, btn.dataset.classlabel || '');
     });
+
+    // Private card "From $___" — public settings/publicPricing (privateFrom only); keeps $250 if unavailable.
+    try {
+      onSnapshot(doc(db, 'settings', 'publicPricing'),
+        snap => { if (window.KAT_BOOKING) window.KAT_BOOKING.showPrivateFrom(snap.exists() ? snap.data() : null); },
+        () => {}   // not readable / missing → the $250 already on the card stays
+      );
+    } catch (e) {}
 
     try {
       const q = query(collection(db, 'classes'), orderBy('date1'));

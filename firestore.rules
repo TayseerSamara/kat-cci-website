@@ -62,6 +62,15 @@ service cloud.firestore {
         && request.resource.data.updatedBy == request.auth.token.email;
     }
 
+    // Public copy of the Private "From $___" price for the homepage. Anyone may read it; only
+    // editors may write it, and it may contain nothing but privateFrom.
+    match /settings/publicPricing {
+      allow read: if true;
+      allow create, update: if isEditor()
+        && request.resource.data.keys().hasOnly(['privateFrom'])
+        && validPrice(request.resource.data.privateFrom);
+    }
+
     function validPrice(p) {
       return (p is int || p is float) && p > 0 && p < 100000;
     }
