@@ -7,12 +7,12 @@ const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Conte
 const MISMATCH = '⚠️ Website price and Stripe checkout do not match. Update Stripe, then confirm the new Stripe amount here.';
 const MATCH = '✓ Website and Stripe pricing match';
 const ACK = amt => `I confirm I have updated and verified this Stripe Payment Link charges ${amt}.`;
-const LINKS = { ccl16: 'https://buy.stripe.com/14A5kDf6g3MXdJ28llak000', renewal3: 'https://buy.stripe.com/6oU7sLgakcjt34ocBBak002', womens: 'https://buy.stripe.com/eVqdR92ju6Z934odFFak001' };
+const LINKS = { ccl16: 'https://buy.stripe.com/4gM7sLaQ0cjt0Wg9ppak007', renewal3: 'https://buy.stripe.com/bJeeVde2c1EP5cw9ppak009' };
 const PAY_CCL = amt => `Hi! You're confirmed for the 16-Hour CCL Certification course.
 
 To lock in your seat, review our quick terms and complete payment of ${amt} here:
 
-https://www.katcci.com/reserve?c=ccl16&to=https%3A%2F%2Fbuy.stripe.com%2F14A5kDf6g3MXdJ28llak000
+https://www.katcci.com/reserve?c=ccl16&to=https%3A%2F%2Fbuy.stripe.com%2F4gM7sLaQ0cjt0Wg9ppak007
 
 You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
 
@@ -66,133 +66,141 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
     return { clip: await page.evaluate(() => navigator.clipboard.readText()), missing, header: await txt(page, `.lc[data-key="${key}"] .lc-price`) };
   }
   const classNotes = page => page.$$eval('#classList .cr-meta', els => els.map(e => e.textContent));
-  const SAVED_KEYS = 'ccl16,ccl16Stripe,privateFrom,renewal3,renewal3Stripe,updatedAt,updatedBy,womens,womensStripe';
+  const SAVED_KEYS = 'ccl16,ccl16Stripe,privateFrom,renewal3,renewal3Stripe,updatedAt,updatedBy';
 
   console.log('Loading current pricing (demo)');
   let { ctx, page, log } = await staffPage('?demo');
-  ok(await val(page, '#cp_ccl16') === '175' && await val(page, '#cp_renewal3') === '125' && await val(page, '#cp_womens') === '125' && await val(page, '#cp_privateFrom') === '250', 'shows website prices: CCL $175, Renewal $125, Women\'s $125, Private from $250');
-  for (const [f, amt] of [['ccl16', '$175'], ['renewal3', '$125'], ['womens', '$125']]) {
+  ok(await val(page, '#cp_ccl16') === '200' && await val(page, '#cp_renewal3') === '140' && await val(page, '#cp_privateFrom') === '250', 'shows website prices: CCL $200, Renewal $140, Private from $250');
+  ok(!(await page.$('#cp_womens')) && !(await page.$('[data-cp="womens"]')) && !/Women/i.test(await txt(page, '#cpCard')), "Class Pricing has no Women's Class row");
+  ok((await page.$$('#cpRows .cp-row')).length === 3, 'Class Pricing rows: CCL, Renewal, Private only');
+  for (const [f, amt] of [['ccl16', '$200'], ['renewal3', '$140']]) {
     const r = await row(page, f);
     ok(r.text.includes('Approved Stripe Payment Link (fixed): ' + LINKS[f].replace('https://', '')) && r.text.includes('Confirmed Stripe amount: ' + amt) && r.okMark && r.okText === MATCH && !r.warn,
        `${f}: website price, fixed Stripe link, confirmed Stripe amount ${amt}, "${MATCH}"`);
   }
   const prow = await row(page, 'privateFrom');
-  ok(prow.text.includes('buy.stripe.com/eVq3cve2c97hcEY7hhak003') && prow.okMark && !prow.warn, 'Private: staff payment link shown, $250 ✓');
+  ok(prow.text.includes('buy.stripe.com/aFa9AT8HS97hcEYattak008') && !prow.text.includes('eVq3cve2c97hcEY7hhak003') && prow.okMark && !prow.warn, 'Private: new $250 staff payment link shown, $250 ✓');
   ok(await page.$$eval('#cpCard input', els => els.every(e => e.type !== 'url' && !/stripe/i.test(e.value))), 'no editable Stripe URL anywhere in Class Pricing');
-  ok(await page.$$eval('.lc[data-key="ccl16"] [data-field=link], .lc[data-key="renewal3"] [data-field=link], .lc[data-key="womens"] [data-field=link]', els => els.length === 3 && els.every(e => e.readOnly)), 'payment helper: regular Stripe links read-only');
+  ok(await page.$$eval('.lc[data-key="ccl16"] [data-field=link], .lc[data-key="renewal3"] [data-field=link], .lc[data-key="private"] [data-field=link]', els => els.length === 3 && els.every(e => e.readOnly)), 'payment helper: CCL, Renewal and Private Stripe links read-only');
   ok(/Last saved .* by nora@katcci\.com/.test(await txt(page, '#cpMeta')), 'shows who last saved');
-  ok(await val(page, '#fPrice') === '175' && /Every 16-Hour CCL Certification class shows and books at \$175/.test(await txt(page, '#fPriceHint')) && await page.$eval('#fPrice', e => e.readOnly), 'new-class form: tuition $175 from Class Pricing (read-only, not set per class)');
+  ok(await val(page, '#fPrice') === '200' && /Every 16-Hour CCL Certification class shows and books at \$200/.test(await txt(page, '#fPriceHint')) && await page.$eval('#fPrice', e => e.readOnly), 'new-class form: tuition $200 from Class Pricing (read-only, not set per class)');
+  ok(!(await page.$('#fType option[value=womens]')), "new-class form: no Women's Class type");
   let sms = await copySms(page, 'ccl16');
-  ok(sms.clip === PAY_CCL('$175') && sms.header === '$175' && !sms.missing, 'Copy SMS (CCL) uses the saved $175');
+  ok(sms.clip === PAY_CCL('$200') && sms.header === '$200' && !sms.missing, 'Copy SMS (CCL) uses the saved $200 and the new CCL link');
+  sms = await copySms(page, 'renewal3');
+  ok(/complete payment of \$140 here/.test(sms.clip) && sms.clip.includes('bJeeVde2c1EP5cw9ppak009') && sms.header === '$140', 'Copy SMS (Renewal) uses $140 and the new Renewal link');
 
   console.log('Invalid prices are rejected');
   for (const bad of ['', '-5', '0', '12.345', '1e3', '100000']) {
     await page.fill('#cp_ccl16', bad);
     const msg = await save(page);
-    ok(/Not saved/.test(msg) && (await saved(page)).ccl16 === 175 && (await row(page, 'ccl16')).warn, `"${bad}" rejected; nothing saved`);
+    ok(/Not saved/.test(msg) && (await saved(page)).ccl16 === 200 && (await row(page, 'ccl16')).warn, `"${bad}" rejected; nothing saved`);
   }
-  await page.fill('#cp_ccl16', '175');
+  await page.fill('#cp_ccl16', '200');
   await page.fill('#cp_privateFrom', '-1');
   ok(/Not saved/.test(await save(page)) && (await pub(page)).privateFrom === 250, 'invalid Private price: neither document written');
   await page.fill('#cp_privateFrom', '250');
 
   console.log('Website price changed, Stripe not yet → mismatch, booking + Copy SMS paused');
   const classesBefore = await classes(page);
-  await page.fill('#cp_ccl16', '185');
+  await page.fill('#cp_ccl16', '210');
   let r = await row(page, 'ccl16');
-  ok(r.warn && r.warnText.startsWith(MISMATCH) && /Website \$185; confirmed Stripe amount \$175/.test(r.warnText) && !r.okMark, 'CCL row shows the mismatch warning before saving');
+  ok(r.warn && r.warnText.startsWith(MISMATCH) && /Website \$210; confirmed Stripe amount \$200/.test(r.warnText) && !r.okMark, 'CCL row shows the mismatch warning before saving');
   let msg = await save(page);
   let sv = await saved(page), pb = await pub(page);
   ok(/✓ Pricing saved/.test(msg) && /paused for 16-Hour CCL Certification/.test(msg), 'saves, and says CCL online booking / Copy SMS are paused');
-  ok(sv.ccl16 === 185 && sv.ccl16Stripe === 175 && sv.updatedBy === 'tony@katcci.com' && sv.updatedAt, 'settings/pricing: ccl16 185, ccl16Stripe 175 (unchanged), stamped');
-  ok(pb.ccl16 === null && pb.renewal3 === 125 && pb.womens === 125 && pb.privateFrom === 250, 'settings/publicPricing: ccl16 null (paused); others unchanged');
+  ok(sv.ccl16 === 210 && sv.ccl16Stripe === 200 && sv.updatedBy === 'tony@katcci.com' && sv.updatedAt, 'settings/pricing: ccl16 210, ccl16Stripe 200 (unchanged), stamped');
+  ok(JSON.stringify(pb) === JSON.stringify({ privateFrom: 250, ccl16: null, renewal3: 140 }), 'settings/publicPricing: { privateFrom 250, ccl16 null (paused), renewal3 140 } — no womens field');
   ok((await row(page, 'ccl16')).warnText.startsWith(MISMATCH), 'warning stays after saving');
   sms = await copySms(page, 'ccl16');
   ok(sms.clip === '(clipboard before)' && sms.missing === MISMATCH && sms.header === '—', 'Copy SMS (CCL): nothing copied, link not sent, shows the mismatch warning');
   await tap(page, '.lc[data-key="ccl16"] [data-action="preview"]');
   ok(!(await page.$eval('.lc[data-key="ccl16"] .lc-preview', e => e.classList.contains('show') && /stripe/.test(e.textContent))), 'preview (CCL) also shows no link');
   sms = await copySms(page, 'renewal3');
-  ok(/complete payment of \$125 here/.test(sms.clip) && !sms.missing, 'Copy SMS (Renewal) unaffected: $125');
+  ok(/complete payment of \$140 here/.test(sms.clip) && !sms.missing, 'Copy SMS (Renewal) unaffected: $140');
   ok(/Online booking for this class type is paused/.test(await txt(page, '#fPriceHint')), 'new-class form explains CCL online booking is paused');
   ok((await classNotes(page)).some(t => /CCL.*online booking paused/.test(t)), 'class list flags upcoming CCL classes: online booking paused');
-  ok(await page.evaluate(() => window.KAT_BOOKING.isBookable({ type: 'ccl', price: 175, date1: '2030-03-07', endDate: '2030-03-08' }, window.KAT_PUBLIC_PRICING)) === false, 'booking.js: a $175 CCL class is not bookable while paused');
+  ok(await page.evaluate(() => window.KAT_BOOKING.isBookable({ type: 'ccl', price: 200, date1: '2030-03-07', endDate: '2030-03-08' }, window.KAT_PUBLIC_PRICING)) === false, 'booking.js: a CCL class is not bookable while paused');
 
   console.log('Confirming the new Stripe amount requires the explicit confirmation');
   await tap(page, '[data-cp-change="ccl16"]');
   ok(await box(page, 'ccl16'), '"Change…" opens the confirmation box');
-  await page.fill('#cpS_ccl16', '185');
-  ok((await txt(page, '#cpAckText_ccl16')) === ACK('$185'), 'confirmation reads: "' + ACK('$185') + '"');
+  await page.fill('#cpS_ccl16', '210');
+  ok((await txt(page, '#cpAckText_ccl16')) === ACK('$210'), 'confirmation reads: "' + ACK('$210') + '"');
   msg = await save(page);
-  ok(/Not saved/.test(msg) && /tick/.test(msg) && (await saved(page)).ccl16Stripe === 175 && (await pub(page)).ccl16 === null, 'Save without ticking: refused, nothing changed');
+  ok(/Not saved/.test(msg) && /tick/.test(msg) && (await saved(page)).ccl16Stripe === 200 && (await pub(page)).ccl16 === null, 'Save without ticking: refused, nothing changed');
   await page.check('#cpAck_ccl16');
-  await page.fill('#cpS_ccl16', '186');
-  ok(!(await page.isChecked('#cpAck_ccl16')) && (await txt(page, '#cpAckText_ccl16')) === ACK('$186'), 'changing the amount clears the tick (must re-confirm the new amount)');
-  ok((await row(page, 'ccl16')).warnText.startsWith(MISMATCH), '$185 website vs $186 Stripe: mismatch shown');
-  await page.fill('#cpS_ccl16', '185');
+  await page.fill('#cpS_ccl16', '211');
+  ok(!(await page.isChecked('#cpAck_ccl16')) && (await txt(page, '#cpAckText_ccl16')) === ACK('$211'), 'changing the amount clears the tick (must re-confirm the new amount)');
+  ok((await row(page, 'ccl16')).warnText.startsWith(MISMATCH), '$210 website vs $211 Stripe: mismatch shown');
+  await page.fill('#cpS_ccl16', '210');
   await page.check('#cpAck_ccl16');
   r = await row(page, 'ccl16');
-  ok(r.okMark && r.okText === MATCH && !r.warn, '$185 / $185 + ticked: "' + MATCH + '"');
+  ok(r.okMark && r.okText === MATCH && !r.warn, '$210 / $210 + ticked: "' + MATCH + '"');
   msg = await save(page);
   sv = await saved(page); pb = await pub(page);
-  ok(/✓ Pricing saved\.$/.test(msg) && sv.ccl16 === 185 && sv.ccl16Stripe === 185 && pb.ccl16 === 185, 'saved: ccl16 185, ccl16Stripe 185 → public ccl16 185');
-  ok(Object.keys(sv).sort().join() === SAVED_KEYS && Object.keys(pb).sort().join() === 'ccl16,privateFrom,renewal3,womens', 'documents hold only the agreed fields (no Stripe URLs)');
-  ok(!(await box(page, 'ccl16')) && (await row(page, 'ccl16')).text.includes('Confirmed Stripe amount: $185'), 'box closes; row shows Confirmed Stripe amount: $185');
+  ok(/✓ Pricing saved\.$/.test(msg) && sv.ccl16 === 210 && sv.ccl16Stripe === 210 && pb.ccl16 === 210, 'saved: ccl16 210, ccl16Stripe 210 → public ccl16 210');
+  ok(Object.keys(sv).sort().join() === SAVED_KEYS && Object.keys(pb).sort().join() === 'ccl16,privateFrom,renewal3', 'documents hold only the agreed fields (no womens / womensStripe, no Stripe URLs)');
+  ok(!(await box(page, 'ccl16')) && (await row(page, 'ccl16')).text.includes('Confirmed Stripe amount: $210'), 'box closes; row shows Confirmed Stripe amount: $210');
   sms = await copySms(page, 'ccl16');
-  ok(sms.clip === PAY_CCL('$185') && sms.header === '$185' && !sms.missing, 'Copy SMS (CCL) resumes with $185 (amount and "$185 covers your 16 hours"), same fixed link');
-  ok(await page.evaluate(() => [window.KAT_BOOKING.isBookable({ type: 'ccl', price: 185, date1: '2030-03-07', endDate: '2030-03-08' }, window.KAT_PUBLIC_PRICING),
+  ok(sms.clip === PAY_CCL('$210') && sms.header === '$210' && !sms.missing, 'Copy SMS (CCL) resumes with $210 (amount and "$210 covers your 16 hours"), same fixed link');
+  ok(await page.evaluate(() => [window.KAT_BOOKING.isBookable({ type: 'ccl', price: 210, date1: '2030-03-07', endDate: '2030-03-08' }, window.KAT_PUBLIC_PRICING),
     window.KAT_BOOKING.isBookable({ type: 'ccl', price: 175, date1: '2030-03-07', endDate: '2030-03-08' }, window.KAT_PUBLIC_PRICING),
-    window.KAT_BOOKING.entryFor({ type: 'ccl', price: 175 }, window.KAT_PUBLIC_PRICING).price].join()) === 'true,true,185', 'booking.js: every CCL class books at $185, whatever its record says');
+    window.KAT_BOOKING.entryFor({ type: 'ccl', price: 175 }, window.KAT_PUBLIC_PRICING).price].join()) === 'true,true,210', 'booking.js: every CCL class books at $210, whatever its record says');
   const notes = await classNotes(page);
-  ok(notes.filter(t => /CCL/.test(t)).length > 0 && notes.filter(t => /CCL/.test(t)).every(t => /\$185/.test(t) && !/\$175|⚠️/.test(t)), 'class list shows every CCL class at $185, no warnings (nothing to edit): ' + notes.filter(t => /CCL/.test(t)).join(' | '));
+  ok(notes.filter(t => /CCL/.test(t)).length > 0 && notes.filter(t => /CCL/.test(t)).every(t => /\$210/.test(t) && !/\$200|⚠️/.test(t)), 'class list shows every CCL class at $210, no warnings (nothing to edit): ' + notes.filter(t => /CCL/.test(t)).join(' | '));
   ok(JSON.stringify(await classes(page)) === JSON.stringify(classesBefore), 'class records are NOT rewritten (legacy price fields untouched): ' + JSON.stringify(classesBefore));
 
   console.log('Other classes and Private');
-  await page.fill('#cp_renewal3', '130.50');
-  await confirmStripe(page, 'renewal3', '130.50');
-  await page.fill('#cp_womens', '120');                   // Women's: website changed only → paused
+  await page.fill('#cp_renewal3', '145.50');               // Renewal: website changed only → paused
   await page.fill('#cp_privateFrom', '275');
   const pr = await row(page, 'privateFrom');
   ok(pr.info && !pr.warn && !pr.text.includes(MISMATCH) && /starting price \(From \$275\) differs from the staff Private payment link \(\$250\)/.test(pr.text), 'Private: informational note only (no strict mismatch)');
   msg = await save(page);
   sv = await saved(page); pb = await pub(page);
-  ok(sv.renewal3 === 130.5 && sv.renewal3Stripe === 130.5 && sv.womens === 120 && sv.womensStripe === 125 && sv.privateFrom === 275, 'saved: Renewal 130.5/130.5, Women\'s 120/125, Private 275');
-  ok(JSON.stringify(pb) === JSON.stringify({ privateFrom: 275, ccl16: 185, renewal3: 130.5, womens: null }), 'public: { privateFrom 275, ccl16 185, renewal3 130.5, womens null }');
-  ok(/paused for Women's Class/.test(msg) && !/Private/.test(msg), 'save message names Women\'s only (never Private)');
+  ok(sv.renewal3 === 145.5 && sv.renewal3Stripe === 140 && sv.privateFrom === 275, 'saved: Renewal 145.5 / confirmed 140, Private 275');
+  ok(JSON.stringify(pb) === JSON.stringify({ privateFrom: 275, ccl16: 210, renewal3: null }), 'public: { privateFrom 275, ccl16 210, renewal3 null }');
+  ok(/paused for 3-Hour Renewal/.test(msg) && !/Private|CCL/.test(msg), 'save message names Renewal only (never Private)');
   sms = await copySms(page, 'renewal3');
-  ok(/complete payment of \$130\.50 here/.test(sms.clip) && sms.header === '$130.50', 'Copy SMS (Renewal): $130.50');
-  sms = await copySms(page, 'womens');
-  ok(sms.clip === '(clipboard before)' && sms.missing === MISMATCH, "Copy SMS (Women's): blocked with the mismatch warning");
+  ok(sms.clip === '(clipboard before)' && sms.missing === MISMATCH, 'Copy SMS (Renewal): blocked with the mismatch warning');
+  await confirmStripe(page, 'renewal3', '145.50');
+  msg = await save(page);
+  ok(/✓ Pricing saved\.$/.test(msg) && JSON.stringify(await pub(page)) === JSON.stringify({ privateFrom: 275, ccl16: 210, renewal3: 145.5 }), 'Renewal confirmed at $145.50 → public renewal3 145.5');
+  sms = await copySms(page, 'renewal3');
+  ok(/complete payment of \$145\.50 here/.test(sms.clip) && sms.header === '$145.50', 'Copy SMS (Renewal): $145.50');
   sms = await copySms(page, 'private');
-  ok(/complete payment of \$250 here/.test(sms.clip), 'Copy SMS (Private) unchanged: staff $250 link');
+  ok(/complete payment of \$250 here/.test(sms.clip) && sms.clip.includes('aFa9AT8HS97hcEYattak008'), 'Copy SMS (Private): staff $250 link (new)');
 
   console.log('New classes use the saved website price');
   await page.selectOption('#fType', 'renewal');
-  ok(await val(page, '#fPrice') === '130.5', 'Renewal new class defaults to 130.5');
+  ok(await val(page, '#fPrice') === '145.5', 'Renewal new class defaults to 145.5');
   await page.selectOption('#fType', 'ccl');
-  ok(await val(page, '#fPrice') === '185' && /Every 16-Hour CCL Certification class shows and books at \$185/.test(await txt(page, '#fPriceHint')), 'CCL tuition shows $185 from Class Pricing');
+  ok(await val(page, '#fPrice') === '210' && /Every 16-Hour CCL Certification class shows and books at \$210/.test(await txt(page, '#fPriceHint')), 'CCL tuition shows $210 from Class Pricing');
   ok(await page.$eval('#fPrice', e => e.readOnly), 'tuition cannot be typed per class');
-  const oldId = Object.keys(classesBefore).find(k => classesBefore[k] === 175);
+  const oldId = Object.keys(classesBefore).find(k => classesBefore[k] === 200);
   await tap(page, `[data-edit="${oldId}"]`);
-  ok(await val(page, '#fPrice') === '185', 'editing an existing class (record $175) shows the central $185');
+  ok(await val(page, '#fPrice') === '210', 'editing an existing class (record $200) shows the central $210');
   await tap(page, '#cancelBtn');
   await page.fill('#fDate1', '2030-03-07'); await page.fill('#fDate2', '2030-03-08');
   await page.$eval('#saveBtn', e => e.click());
   await page.waitForFunction(() => /added/.test(document.getElementById('mgrMsg').textContent));
   const after = await classes(page);
   const newIds = Object.keys(after).filter(k => !(k in classesBefore));
-  ok(newIds.length === 1 && after[newIds[0]] === 185, 'new class saved at $185');
+  ok(newIds.length === 1 && after[newIds[0]] === 210, 'new class saved at $210');
 
-  console.log('Back to $175 / $125 / $125');
-  await page.fill('#cp_ccl16', '175'); await confirmStripe(page, 'ccl16', '175');
-  await page.fill('#cp_renewal3', '125'); await confirmStripe(page, 'renewal3', '125');
-  await page.fill('#cp_womens', '125');
-  ok((await row(page, 'womens')).okText === MATCH, "Women's back to $125 = confirmed $125: ✓ match without re-confirming");
-  await tap(page, '[data-cp-change="womens"]');
-  await tap(page, '[data-cp-cancel="womens"]');
-  ok(!(await box(page, 'womens')), 'Cancel closes the confirmation box');
+  console.log('Back to $200 / $140');
+  await page.fill('#cp_ccl16', '200'); await confirmStripe(page, 'ccl16', '200');
+  await page.fill('#cp_renewal3', '140'); await confirmStripe(page, 'renewal3', '140');
+  await save(page);
+  await page.fill('#cp_ccl16', '205');
+  await page.fill('#cp_ccl16', '200');
+  ok((await row(page, 'ccl16')).okText === MATCH, 'CCL back to $200 = confirmed $200: ✓ match without re-confirming');
+  await tap(page, '[data-cp-change="ccl16"]');
+  await tap(page, '[data-cp-cancel="ccl16"]');
+  ok(!(await box(page, 'ccl16')), 'Cancel closes the confirmation box');
   await page.fill('#cp_privateFrom', '262.50');
   await save(page);
-  ok(JSON.stringify(await pub(page)) === JSON.stringify({ privateFrom: 262.5, ccl16: 175, renewal3: 125, womens: 125 }), 'public pricing back to 175 / 125 / 125, From 262.50');
+  ok(JSON.stringify(await pub(page)) === JSON.stringify({ privateFrom: 262.5, ccl16: 200, renewal3: 140 }), 'public pricing back to 200 / 140, From 262.50');
   ok(log.firebase === 0 && log.errors.length === 0, 'demo: zero Firebase requests, no JavaScript errors ' + log.errors.join(' | '));
   await ctx.close();
 
@@ -234,17 +242,19 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   console.log('No pricing saved yet (fresh demo) / no confirmed Stripe amounts yet');
   ({ ctx, page, log } = await staffPage('?demo=fresh'));
   ok(/Not saved yet/.test(await txt(page, '#cpMeta')) && (await pub(page)) === null, '"Not saved yet"; no public pricing document');
-  ok(await box(page, 'ccl16') && await box(page, 'renewal3') && await box(page, 'womens'), 'confirmation boxes open for every regular class (nothing confirmed yet)');
+  ok(await box(page, 'ccl16') && await box(page, 'renewal3') && (await page.$$('.cp-confirm-box')).length === 2, 'confirmation boxes open for both regular classes (nothing confirmed yet)');
   let sms0 = await copySms(page, 'ccl16');
   ok(sms0.clip === '(clipboard before)' && sms0.missing === MISMATCH, 'Copy SMS (CCL) blocked until pricing is confirmed');
   ok(/Not saved/.test(await save(page)) && (await saved(page)) === null, 'Save refused while prices are blank');
-  for (const [f, v] of [['ccl16', '175'], ['renewal3', '125'], ['womens', '125']]) { await page.fill('#cp_' + f, v); await confirmStripe(page, f, v, f !== 'womens'); }
-  ok(/Not saved/.test(await save(page)) && /Women's Class/.test(await txt(page, '#cpMsg')) && (await saved(page)) === null, "Women's not ticked → refused, nothing written");
-  await page.check('#cpAck_womens');
+  for (const [f, v] of [['ccl16', '200'], ['renewal3', '140']]) { await page.fill('#cp_' + f, v); await confirmStripe(page, f, v, f !== 'renewal3'); }
+  ok(/Not saved/.test(await save(page)) && /3-Hour Renewal/.test(await txt(page, '#cpMsg')) && (await saved(page)) === null, 'Renewal not ticked → refused, nothing written');
+  await page.check('#cpAck_renewal3');
   await save(page);
-  ok(JSON.stringify(await pub(page)) === JSON.stringify({ privateFrom: 250, ccl16: 175, renewal3: 125, womens: 125 }) && (await saved(page)).womensStripe === 125, 'first confirmed save creates both documents');
+  const sv0 = await saved(page);
+  ok(JSON.stringify(await pub(page)) === JSON.stringify({ privateFrom: 250, ccl16: 200, renewal3: 140 }) && sv0.ccl16Stripe === 200 && sv0.renewal3Stripe === 140 && Object.keys(sv0).sort().join() === SAVED_KEYS,
+     'first confirmed save creates both documents: CCL 200/200, Renewal 140/140, Private 250');
   sms0 = await copySms(page, 'ccl16');
-  ok(sms0.clip === PAY_CCL('$175'), 'Copy SMS (CCL) now works at $175');
+  ok(sms0.clip === PAY_CCL('$200'), 'Copy SMS (CCL) now works at $200');
   ok(log.firebase === 0 && log.errors.length === 0, 'no Firebase requests, no JavaScript errors ' + log.errors.join(' | '));
   await ctx.close();
 
@@ -253,7 +263,8 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   await stubGoogle(ctx);
   page = await ctx.newPage();
   const promos = await (await page.request.get(SITE + '/promos.js')).text();
-  ok(/price: 160,/.test(promos) && /price: 100,/.test(promos) && promos.includes('bJe28rcY86Z9cEYeJJak005') && promos.includes('4gM5kD6zK4R15cwbxxak006'), 'promotional prices ($160 / $100) and promo Stripe links unchanged');
+  ok(/price: 160,/.test(promos) && promos.includes('bJe28rcY86Z9cEYeJJak005'), 'CCL promotion ($160) and its Stripe link unchanged');
+  ok(!/price: 100,/.test(promos) && !promos.includes('4gM5kD6zK4R15cwbxxak006') && !/womens/i.test(promos), "Women's promotion and its Stripe link removed");
   await ctx.addInitScript(() => { try { sessionStorage.setItem('katcci_promo_seen', '1'); } catch (e) {} });
   await ctx.route(/Firestore\/Write|formspree\.io/, r => r.abort());
   page = await ctx.newPage();
@@ -262,9 +273,10 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   // Live data: each card's price is its type's published central price (none shown when paused).
   const cards = await page.$$eval('#upcomingGrid .uc-card[data-dynamic]', els => els.map(e => ({ title: e.querySelector('.uc-title').textContent, price: e.querySelector('.uc-price') ? e.querySelector('.uc-price').textContent : '', link: !!e.querySelector('a.btn-reserve') })));
   const livePub = await page.evaluate(() => window.KAT_BOOKING.loadPublicPricing());
-  const TYPE_KEY = [['16-Hour CCL', 'ccl16'], ['CCL Renewal', 'renewal3'], ["Women's", 'womens']];
+  const TYPE_KEY = [['16-Hour CCL', 'ccl16'], ['CCL Renewal', 'renewal3']];
+  ok(cards.every(c => !/Women/i.test(c.title)), "no Women's Class card on the homepage");
   const expectFor = c => { const k = (TYPE_KEY.find(([t]) => c.title.includes(t)) || [])[1]; const v = k && livePub ? livePub[k] : null; return typeof v === 'number' ? '$' + v : ''; };
-  ok(cards.length > 0 && cards.every(c => c.price === expectFor(c) && c.link === !!expectFor(c)),
+  ok(cards.every(c => c.price === expectFor(c) && c.link === !!expectFor(c)),
      'live homepage cards follow settings/publicPricing (' + JSON.stringify(livePub) + '): ' + cards.map(c => c.title + ' ' + (c.price || 'no price / Text to Reserve')).join(', '));
 
   // Homepage Private card: reads settings/publicPricing, else keeps the $250 fallback.

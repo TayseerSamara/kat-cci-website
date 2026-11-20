@@ -269,8 +269,8 @@
     <a href="/terms">Terms</a> · <a href="/">Home</a>
   </footer>
 
-  <script src="promos.js"></script>
-  <script src="booking.js"></script>
+  <script src="promos.js?v=20261119"></script>
+  <script src="booking.js?v=20261119"></script>
   <script>
     (function () {
       var params = new URLSearchParams(window.location.search);
@@ -335,7 +335,6 @@
         var CLASS_NAMES = {
           ccl16: '16-Hour CCL Certification',
           renewal3: '3-Hour CCL Renewal',
-          womens: "Women's Class",
           private: 'Private 1-on-1 Class',
           test: 'Test Class ($5)'
         };
@@ -355,7 +354,6 @@
         var CLASS_ACKS = {
           ccl16:    ['age', 'rangefee', 'facility', 'transport', 'payment', 'safety', 'terms'],
           renewal3: ['payment', 'safety', 'terms'],
-          womens:   ['payment', 'safety', 'terms'],
           private:  ['payment', 'safety', 'terms'],
           test:     ['age', 'rangefee', 'facility', 'transport', 'payment', 'safety', 'terms']
         };
@@ -458,10 +456,10 @@
         });
 
         // Pending purchase for the Google Ads conversion on /confirmed. The amount never comes from
-        // the URL: promotions use their fixed promos.js price ($160 / $100); regular classes use the
+        // the URL: promotions use their fixed promos.js price ($160 CCL promo); regular classes use the
         // current online-bookable price from settings/publicPricing (website price = confirmed Stripe
         // amount). Staff-texted links count only when their Stripe link is the approved regular link.
-        var PROMO_VALUES = [160, 100];
+        var PROMO_VALUES = [160];
         function rememberPendingPurchase() {
           var value = null, kind = '';
           var B = window.KAT_BOOKING;

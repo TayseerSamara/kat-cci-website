@@ -88,19 +88,6 @@ We provide eye & ear protection.
 
 See you soon!
 — KAT CCI`;
-const REM_WOMENS = `Hi! Your seat is confirmed for the KAT CCI Women's Class.
-
-📅 ${day(iso(20))}
-🕛 12:00 PM
-${ADDR}
-
-🧾 Bring:
-• Valid photo ID
-
-We provide everything else — course materials and eye & ear protection.
-
-See you soon!
-— KAT CCI`;
 const REM_PRIVATE = `Hi! Your seat is confirmed for the KAT CCI Private 1-on-1 Class.
 
 📅 ${day('2026-11-07')}
@@ -116,17 +103,17 @@ See you soon!
 — KAT CCI`;
 const PAY_CCL = d => `Hi! You're confirmed for the 16-Hour CCL Certification course${d ? ' on ' + d : ''}.
 
-To lock in your seat, review our quick terms and complete payment of $175 here:
+To lock in your seat, review our quick terms and complete payment of $200 here:
 
-https://www.katcci.com/reserve?c=ccl16&to=https%3A%2F%2Fbuy.stripe.com%2F14A5kDf6g3MXdJ28llak000
+https://www.katcci.com/reserve?c=ccl16&to=https%3A%2F%2Fbuy.stripe.com%2F4gM7sLaQ0cjt0Wg9ppak007
 
 You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
 
-$175 covers your 16 hours of training. The $150 state fee is paid separately to ISP.
+$200 covers your 16 hours of training. The $150 state fee is paid separately to ISP.
 
 — Kat CCI`;
 // Anything that would make a reminder a payment request.
-const NO_PAY = /stripe|https?:|\/reserve|payment|pay by|complete pay|\$(175|160|125|100|250|140|5)\b|promo|coupon|Zelle/i;
+const NO_PAY = /stripe|https?:|\/reserve|payment|pay by|complete pay|\$(200|175|160|125|100|250|140|5)\b|promo|coupon|Zelle/i;
 
 (async () => {
   const browser = await chromium.launch({ executablePath: CHROME, headless: true,
@@ -162,7 +149,9 @@ const NO_PAY = /stripe|https?:|\/reserve|payment|pay by|complete pay|\$(175|160|
   await page.waitForFunction(() => window.KAT_PUBLIC_PRICING !== undefined, null, { timeout: 10000 });   // current regular prices loaded
 
   // ── Copy Class Reminder (payment helper cards work without signing in) ──
-  ok((await page.$$('[data-action="remind-copy"]')).length === 4 && !(await page.$(card('test') + ' [data-action="remind-copy"]')), "Copy Class Reminder on the CCL, Renewal, Women's and Private cards (not the $5 test card)");
+  ok((await page.$$('[data-action="remind-copy"]')).length === 3 && !(await page.$(card('test') + ' [data-action="remind-copy"]')), 'Copy Class Reminder on the CCL, Renewal and Private cards (not the $5 test card)');
+  ok(!(await page.$(card('womens'))) && !(await page.$$eval('.lc .lc-title', els => els.map(t => t.textContent).join('|'))).match(/Women/i),
+     "no Women's Class payment card (Copy SMS / reminder)");
   ok((await txt(page, card('ccl16') + ' [data-action="copy"]')).trim() === '📋 Copy SMS', 'Copy SMS button still there');
   await page.click(card('ccl16') + ' [data-action="copy"]');
   ok((await clip(page)) === PAY_CCL(''), 'existing CCL Copy SMS (payment request) unchanged');
@@ -193,12 +182,6 @@ const NO_PAY = /stripe|https?:|\/reserve|payment|pay by|complete pay|\$(175|160|
   ok(renRem === REM_RENEWAL, 'Renewal reminder: one day, 6:00 PM, renewal instructions');
   ok(!NO_PAY.test(renRem) && !/Day 2/.test(renRem), 'Renewal reminder: no payment link/price/request, no Day 2 info');
 
-  await page.click(card('womens') + ' .sched-chip');
-  await page.click(card('womens') + ' [data-action="remind-copy"]');
-  const womRem = await clip(page);
-  ok(womRem === REM_WOMENS, "Women's reminder: correct date, 12:00 PM, women's instructions");
-  ok(!NO_PAY.test(womRem) && !/Day 2|firearm \+ 30/.test(womRem), "Women's reminder: no payment info, no Day 2 / range items");
-
   ok(!(await page.$(card('private') + ' .sched-chip')), 'Private card has no schedule picks');
   await page.click(card('private') + ' [data-action="remind-copy"]');
   ok(await visible(page, card('private') + ' .lc-remind-missing'), 'Private reminder without a date asks for one');
@@ -209,8 +192,13 @@ const NO_PAY = /stripe|https?:|\/reserve|payment|pay by|complete pay|\$(175|160|
   ok(privRem === REM_PRIVATE && !NO_PAY.test(privRem), 'Private reminder: typed date and 2:30 PM, private instructions, no payment info');
   await page.click(card('private') + ' [data-action="copy"]');
   const privPay = await clip(page);
-  ok(/complete payment of \$250 here/.test(privPay) && /buy\.stripe\.com%2FeVq3cve2c97hcEY7hhak003/.test(privPay), 'existing Private Copy SMS still works with its $250 Stripe link');
-  ok(await page.$eval(card('ccl16') + ' input[data-field=link]', e => e.value) === 'https://buy.stripe.com/14A5kDf6g3MXdJ28llak000', 'Stripe payment links untouched');
+  ok(/complete payment of \$250 here/.test(privPay) && /buy\.stripe\.com%2FaFa9AT8HS97hcEYattak008/.test(privPay) && !/eVq3cve2c97hcEY7hhak003/.test(privPay), 'Private Copy SMS uses the new $250 Private Stripe link');
+  const links = await page.$$eval('.lc input[data-field=link]', els => Object.fromEntries(els.map(e => [e.closest('.lc').dataset.key, [e.value, e.readOnly]])));
+  ok(links.ccl16[0] === 'https://buy.stripe.com/4gM7sLaQ0cjt0Wg9ppak007' && links.renewal3[0] === 'https://buy.stripe.com/bJeeVde2c1EP5cw9ppak009' &&
+     links.private[0] === 'https://buy.stripe.com/aFa9AT8HS97hcEYattak008' && links.test[0] === 'https://buy.stripe.com/6oUbJ18HS4R1gVe7hhak004',
+     'Stripe links: CCL 4gM7sL...007, Renewal bJeeVd...009, Private aFa9AT...008, Test unchanged');
+  ok(links.ccl16[1] && links.renewal3[1] && links.private[1] && links.test[1], 'built-in Stripe links are read-only');
+  ok((await txt(page, card('ccl16') + ' .lc-price')) === '$200' && (await txt(page, card('renewal3') + ' .lc-price')) === '$140', 'payment cards show CCL $200, Renewal $140');
 
   // Confirmation & Class Details SMS: payment line on all but Day 2
   const conf = card('confirm');
@@ -221,7 +209,8 @@ const NO_PAY = /stripe|https?:|\/reserve|payment|pay by|complete pay|\$(175|160|
   ok((await txt(page, conf + ' .lc-preview')) === CONFIRM_DAY1, 'confirmation preview (Day 1) unchanged, with payment line');
   await page.click(conf + ' [data-action=copy]');
   ok((await clip(page)) === CONFIRM_DAY1, 'confirmation Copy SMS (Day 1) unchanged');
-  for (const t of ['renewal', 'womens', 'private']) {
+  ok(!(await page.$(conf + ' select[data-field=classType] option[value=womens]')), "confirmation tool: no Women's Class option");
+  for (const t of ['renewal', 'private']) {
     await page.selectOption(conf + ' select[data-field=classType]', t);
     await page.click(conf + ' [data-action=copy]');
     ok(((await clip(page)).match(/\n\n💵 Payment: Zelle, Apple Pay, or Cash\n\n/g) || []).length === 1, 'confirmation payment line present once for ' + t);
@@ -236,6 +225,22 @@ const NO_PAY = /stripe|https?:|\/reserve|payment|pay by|complete pay|\$(175|160|
   await page.waitForSelector(card('ccl16') + ' .sched-chip.active');
   ok((await val(page, card('ccl16') + ' [data-field=time]')) === '09:00' && (await val(page, card('private') + ' [data-field=time]')) === '14:30', 'reminder fields remembered on this device after reload');
 
+  // A device that saved OLD links earlier still gets the new built-in links
+  await page.evaluate(() => {
+    const st = JSON.parse(localStorage.getItem('katcci_pay_helper_v1') || '{}');
+    st.private = { ...(st.private || {}), link: 'https://buy.stripe.com/eVq3cve2c97hcEY7hhak003' };
+    st.ccl16 = { ...(st.ccl16 || {}), link: 'https://buy.stripe.com/14A5kDf6g3MXdJ28llak000' };
+    localStorage.setItem('katcci_pay_helper_v1', JSON.stringify(st));
+  });
+  await page.reload();
+  await page.waitForFunction(() => window.KAT_PUBLIC_PRICING !== undefined, null, { timeout: 10000 });
+  await page.click(card('private') + ' [data-action="copy"]');
+  const privPay2 = await clip(page);
+  ok((await val(page, card('private') + ' input[data-field=link]')) === 'https://buy.stripe.com/aFa9AT8HS97hcEYattak008' && /aFa9AT8HS97hcEYattak008/.test(privPay2) && !/eVq3cve2c97hcEY7hhak003/.test(privPay2),
+     'old Private link saved on this device is ignored; the new link is used');
+  await page.click(card('ccl16') + ' [data-action="copy"]');
+  ok(/4gM7sLaQ0cjt0Wg9ppak007/.test(await clip(page)), 'old CCL link saved on this device is ignored');
+
   // ── Staff tools (demo sign-in) ──
   await page.waitForSelector('text=DEMO MODE', { timeout: 10000 });
   await tap(page, '#signinBtn');
@@ -243,7 +248,18 @@ const NO_PAY = /stripe|https?:|\/reserve|payment|pay by|complete pay|\$(175|160|
   ok((await txt(page, '#mgrEmail')) === 'tony@katcci.com', 'signed in (demo) as tony@katcci.com and allowed');
   await page.waitForSelector('#rosterList .student-row');
   await page.waitForSelector('#rhList .student-row', { state: 'attached' });
-  ok((await page.$$('#rosterList .student-row')).length === 4, 'roster shows 4 sample students');
+  ok((await page.$$('#rosterList .student-row')).length === 4, "roster shows 4 sample students (incl. 2 historical Women's Class students)");
+  ok(!(await page.$('#fType option[value=womens]')) && !(await page.$('#sType option[value=womens]')), "Add Class / Add Student: no Women's Class option for new entries");
+  await page.waitForSelector('#classList .class-row');
+  const rows = await page.$$eval('#classList .class-row', els => els.map(e => ({ t: e.textContent, edit: !!e.querySelector('[data-edit]'), del: !!e.querySelector('[data-del]') })));
+  const wRows = rows.filter(r => /Women's Class \(retired\)/.test(r.t));
+  ok(rows.length === 4 && wRows.length === 2 && wRows.every(r => !r.edit && r.del && /no online booking/.test(r.t) && !/\$125/.test(r.t)),
+     "old Women's class records kept and listed as retired: no price, no edit, still deletable");
+  ok(rows.some(r => /16-Hour CCL Certification · \$200/.test(r.t)) && rows.some(r => /3-Hour Renewal · \$140/.test(r.t)), 'schedule list: CCL $200, Renewal $140 from Class Pricing');
+  await tap(page, '[data-sedit="s1"]');
+  ok((await val(page, '#sType')) === 'womens' && /retired/.test(await page.$eval('#sType', e => e.selectedOptions[0].textContent)), "editing a historical Women's student keeps its class type");
+  await tap(page, '#sCancelBtn');
+  ok(!(await page.$('#sType option[value=womens]')) && (await val(page, '#sType')) === 'ccl', 'cancel: retired option removed again');
   ok((await page.$$('#rosterList [data-srev]')).length === 4, 'every roster row has a ⭐ Request Review button');
   ok((await page.$$('#rhList .student-row')).length === 2, 'history shows 2 sample requests');
   ok(/Review requested/.test(await page.$eval('[data-srev="s1"]', b => b.closest('.student-row').textContent)), 'roster badge shows Jordan already had a review request');

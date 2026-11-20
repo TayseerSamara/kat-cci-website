@@ -8,12 +8,13 @@
 // promos.js and are separate. Needs promos.js loaded first for checkoutUrl (ad attribution).
 (function () {
   // Trusted approved Stripe Payment Links (fixed), keyed by schedule class type.
+  // CCL $200 and Renewal $140 (links replaced 2026-11-19; the old $175/$125 links are no longer used by the site).
   // Keep in step with the staff page's DEFAULT_LINKS (pay.html) — the same approved links.
   var REGULAR = {
     ccl: {
       classKey: 'ccl16',                    // /reserve acknowledgments + pricing field
       title: '16-Hour CCL Certification',
-      checkoutUrl: 'https://buy.stripe.com/14A5kDf6g3MXdJ28llak000',
+      checkoutUrl: 'https://buy.stripe.com/4gM7sLaQ0cjt0Wg9ppak007',
       paired: true,
       info: ['+ $150 Illinois state fee, paid separately to ISP',
              'Day 2 range fees: $23 lane fee + $6 range waiver, paid at the range',
@@ -23,20 +24,15 @@
     renewal: {
       classKey: 'renewal3',
       title: '3-Hour CCL Renewal',
-      checkoutUrl: 'https://buy.stripe.com/6oU7sLgakcjt34ocBBak002',
+      checkoutUrl: 'https://buy.stripe.com/bJeeVde2c1EP5cw9ppak009',
       paired: false,
       info: ['+ $150 Illinois state renewal fee, paid separately to ISP',
              'Range fees: $23 lane fee + $6 range waiver, paid on-site',
              'Firearm rental with ammo: $25 (optional)',
              'Eye & ear protection included']
-    },
-    womens: {
-      classKey: 'womens',
-      title: "Women's Class",
-      checkoutUrl: 'https://buy.stripe.com/eVqdR92ju6Z934odFFak001',
-      paired: false,
-      info: ['Course materials and eye & ear protection included']
     }
+    // Women's Class is no longer a regular offering (2026-11-19): it has no entry here, so an old
+    // scheduled Women's class record never produces an online booking path.
   };
 
   var PROJECT = 'katcci';
@@ -61,7 +57,7 @@
     return undefined;
   }
 
-  // Public pricing: { privateFrom, ccl16, renewal3, womens } — a regular value is present only when
+  // Public pricing: { privateFrom, ccl16, renewal3 } — a regular value is present only when
   // that class can be booked online at that price; null means online booking is paused.
   var publicPricingPromise = null;
   function loadPublicPricing() {
@@ -71,7 +67,7 @@
         .then(function (doc) {
           if (!doc || !doc.fields) return null;
           var out = {};
-          ['privateFrom', 'ccl16', 'renewal3', 'womens'].forEach(function (k) { out[k] = fieldValue(doc.fields[k]); });
+          ['privateFrom', 'ccl16', 'renewal3'].forEach(function (k) { out[k] = fieldValue(doc.fields[k]); });
           return out;
         })
         .catch(function () { return null; });

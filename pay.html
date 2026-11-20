@@ -733,39 +733,6 @@
       <pre class="lc-preview lc-remind-preview"></pre>
     </div>
 
-    <!-- ═══ WOMEN'S CLASS ═══ -->
-    <div class="lc" data-key="womens">
-      <div class="lc-head">
-        <span class="lc-title">Women's Class (4 hrs)</span>
-        <span class="lc-price">—</span>
-      </div>
-      <div class="lc-row">
-        <label>Stripe Payment Link</label>
-        <input type="url" data-field="link" placeholder="https://buy.stripe.com/...">
-      </div>
-      <div class="lc-row">
-        <label>Class date (optional — adds to message)</label>
-        <input type="date" data-field="date">
-      </div>
-      <div class="lc-sched" data-sched-type="womens"></div>
-      <div class="lc-row">
-        <label>Class start time (optional — for reminder)</label>
-        <input type="time" data-field="time">
-      </div>
-      <div class="lc-actions">
-        <button class="btn btn-copy" data-action="copy">📋 Copy SMS</button>
-        <button class="btn btn-preview" data-action="preview" title="Preview message">👁️</button>
-      </div>
-      <div class="lc-missing">⚠️ Add your Stripe link first.</div>
-      <pre class="lc-preview"></pre>
-      <div class="lc-actions remind-actions">
-        <button class="btn btn-remind" data-action="remind-copy">🔔 Copy Class Reminder</button>
-        <button class="btn btn-preview" data-action="remind-preview" title="Preview reminder">👁️</button>
-      </div>
-      <div class="lc-missing lc-remind-missing">⚠️ Pick the class date first.</div>
-      <pre class="lc-preview lc-remind-preview"></pre>
-    </div>
-
     <!-- ═══ PRIVATE CLASS ═══ -->
     <div class="lc" data-key="private">
       <div class="lc-head">
@@ -856,7 +823,6 @@
           <option value="ccl_day1">16-Hour CCL — Day 1 (Classroom)</option>
           <option value="ccl_day2">16-Hour CCL — Day 2 (Range)</option>
           <option value="renewal">3-Hour Renewal</option>
-          <option value="womens">Women's Class</option>
           <option value="private">Private 1-on-1</option>
         </select>
       </div>
@@ -889,7 +855,7 @@
       </div>
       <div class="lc-row">
         <label>Amount due (optional)</label>
-        <input type="text" data-field="amount" placeholder="e.g. $175">
+        <input type="text" data-field="amount" placeholder="e.g. $200">
       </div>
       <div class="lc-actions">
         <button class="btn btn-copy" data-action="copy">📋 Copy Zelle Instructions</button>
@@ -906,7 +872,7 @@
       </div>
       <div class="lc-row">
         <label>Amount due (optional)</label>
-        <input type="text" data-field="amount" placeholder="e.g. $175">
+        <input type="text" data-field="amount" placeholder="e.g. $200">
       </div>
       <div class="lc-actions">
         <button class="btn btn-copy" data-action="copy">📋 Copy Cash Instructions</button>
@@ -951,7 +917,6 @@
           <select id="fType">
             <option value="ccl">16-Hour CCL Certification</option>
             <option value="renewal">3-Hour Renewal</option>
-            <option value="womens">Women's Class</option>
           </select>
         </div>
         <div class="lc-row">
@@ -1026,7 +991,6 @@
           <select id="sType">
             <option value="ccl">16-Hour CCL Certification</option>
             <option value="renewal">3-Hour Renewal</option>
-            <option value="womens">Women's Class</option>
             <option value="private">Private 1-on-1</option>
           </select>
         </div>
@@ -1234,11 +1198,6 @@
         amount: null,
         suffix: 'Reminder: the $150 state renewal fee is paid separately to ISP.'
       },
-      womens: {
-        title: "the Women's Class",
-        amount: null,
-        suffix: null
-      },
       private: {
         title: 'your Private 1-on-1 class',
         amount: '$250',
@@ -1253,18 +1212,17 @@
 
     // ── Hardcoded Stripe payment links (permanent) ──
     const DEFAULT_LINKS = {
-      ccl16:    'https://buy.stripe.com/14A5kDf6g3MXdJ28llak000',
-      renewal3: 'https://buy.stripe.com/6oU7sLgakcjt34ocBBak002',
-      womens:   'https://buy.stripe.com/eVqdR92ju6Z934odFFak001',
-      private:  'https://buy.stripe.com/eVq3cve2c97hcEY7hhak003',
+      ccl16:    'https://buy.stripe.com/4gM7sLaQ0cjt0Wg9ppak007',   // $200
+      renewal3: 'https://buy.stripe.com/bJeeVde2c1EP5cw9ppak009',   // $140
+      private:  'https://buy.stripe.com/aFa9AT8HS97hcEYattak008',   // $250
       test:     'https://buy.stripe.com/6oUbJ18HS4R1gVe7hhak004'
     };
 
-    // ── Regular class prices (CCL, Renewal, Women's) ──
+    // ── Regular class prices (CCL, Renewal) ──
     // Their Stripe links are fixed (above, never editable). The amount comes from the public
     // settings/publicPricing, which has a price only when the website price equals the Stripe amount
     // an editor confirmed in Class Pricing. null → paused: Copy SMS won't send the link.
-    const REGULAR_KEYS = ['ccl16', 'renewal3', 'womens'];
+    const REGULAR_KEYS = ['ccl16', 'renewal3'];
     const PRICE_MISMATCH = '⚠️ Website price and Stripe checkout do not match. Update Stripe, then confirm the new Stripe amount here.';
     function regularAmount(key) {
       const pub = window.KAT_PUBLIC_PRICING;
@@ -1310,8 +1268,9 @@
       const cardState = state[key] || {};
       card.querySelectorAll('[data-field]').forEach(input => {
         const field = input.dataset.field;
-        // Regular class links are fixed approved Stripe links — shown read-only.
-        if (field === 'link' && REGULAR_KEYS.includes(key)) {
+        // Built-in Stripe links are fixed approved links — shown read-only, never taken from saved
+        // device state (so a link replaced in code can't be overridden by an old saved copy).
+        if (field === 'link' && DEFAULT_LINKS[key]) {
           input.value = DEFAULT_LINKS[key];
           input.readOnly = true;
           input.classList.add('has-value');
@@ -1415,13 +1374,6 @@
             ],
             footer: 'Range fees ($23) and lane waiver ($6) are paid on-site.\n\nWe provide eye & ear protection.'
           },
-          womens: {
-            heading: `You're all set for the Women's Class on ${niceDate}!`,
-            bring: [
-              'Valid photo ID'
-            ],
-            footer: 'We provide everything else — course materials and eye & ear protection.'
-          },
           private: {
             heading: `You're all set for your Private 1-on-1 class on ${niceDate}!`,
             bring: [
@@ -1461,7 +1413,8 @@ Reply with any questions before class day — see you soon!
       const regular = REGULAR_KEYS.includes(key);
       if (regular && regularBlock(key)) return null;
       const amount = regular ? fmtMoney(regularAmount(key)) : tpl.amount;
-      const stripeLink = regular ? DEFAULT_LINKS[key] : (cardState.link || DEFAULT_LINKS[key]);
+      // Built-in links are fixed (a link saved on this device earlier is never used instead).
+      const stripeLink = DEFAULT_LINKS[key] || cardState.link;
       if (!stripeLink) return null;
 
       // Format the date-picker value (YYYY-MM-DD) → "June 6".
@@ -1501,11 +1454,6 @@ You can pay by card, Apple Pay, or Google Pay. Prefer Zelle or cash? Just reply.
         name: '3-Hour CCL Renewal', schedType: 'renewal',
         bring: ['Valid photo ID or FOID card', 'Your firearm + 30 rounds of ammo (or rent from us — $25, ammo included)', 'Comfortable closed-toe shoes'],
         notes: ['Range fees ($23) and lane waiver ($6) are paid on-site.', 'We provide eye & ear protection.']
-      },
-      womens: {
-        name: "Women's Class", schedType: 'womens',
-        bring: ['Valid photo ID'],
-        notes: ['We provide everything else — course materials and eye & ear protection.']
       },
       private: {
         name: 'Private 1-on-1 Class', schedType: null,
@@ -1731,7 +1679,7 @@ See you soon!
   </script>
 
   <!-- Approved regular Stripe checkouts (trusted mapping, shared with the public booking flow) -->
-  <script src="booking.js"></script>
+  <script src="booking.js?v=20261119"></script>
 
   <!-- ═══════════════ SCHEDULE MANAGER (Firebase) ═══════════════ -->
   <script type="module">
@@ -1768,7 +1716,9 @@ See you soon!
     const TYPE_INFO = {
       ccl:     { label: '16-Hour CCL Certification', paired: true },
       renewal: { label: '3-Hour Renewal',            paired: false },
-      womens:  { label: "Women's Class",             paired: false }
+      // Retired type: kept only so old Women's class records still display (not offered for new
+      // classes, not editable, no pricing, no online booking).
+      womens:  { label: "Women's Class (retired)",   paired: false, retired: true }
     };
 
     const app = initializeApp(firebaseConfig);
@@ -1976,10 +1926,10 @@ See you soon!
         return '<div class="class-row' + (past ? ' is-past' : '') + '">' +
           '<div class="cr-info">' +
             '<div class="cr-date">' + dateStr + (timeStr ? ' · ' + timeStr : '') + (past ? ' · ended' : '') + '</div>' +
-            '<div class="cr-meta">' + info.label + classPriceLabel(it, past) + '</div>' +
+            '<div class="cr-meta">' + info.label + (info.retired ? ' · not offered — no online booking' : classPriceLabel(it, past)) + '</div>' +
           '</div>' +
           '<div class="cr-actions">' +
-            '<button class="cr-edit" data-edit="' + it.id + '" title="Edit">✏️</button>' +
+            (info.retired ? '' : '<button class="cr-edit" data-edit="' + it.id + '" title="Edit">✏️</button>') +
             '<button class="cr-del" data-del="' + it.id + '" title="Delete">🗑️</button>' +
           '</div>' +
         '</div>';
@@ -1991,7 +1941,7 @@ See you soon!
       const dl = e.target.closest('[data-del]');
       if (ed) {
         const it = currentItems.find(x => x.id === ed.dataset.edit);
-        if (it) startEdit(it);
+        if (it && TYPE_INFO[it.type] && !TYPE_INFO[it.type].retired) startEdit(it);
       }
       if (dl) {
         const it = currentItems.find(x => x.id === dl.dataset.del);
@@ -2045,10 +1995,14 @@ See you soon!
       sName.value = ''; sPhone.value = ''; sEmail.value = '';
       sDate.value = ''; sNotes.value = '';
       sType.value = 'ccl'; sPaid.value = 'pending';
+      dropRetiredStudentOption();
       sMethod.value = ''; sWaiver.checked = false;
       sSaveBtn.textContent = '➕ Add Student';
       rosterFormTitle.textContent = '➕ Add a Student';
       sCancelBtn.style.display = 'none';
+    }
+    function dropRetiredStudentOption() {
+      sType.querySelectorAll('option[data-retired]').forEach(o => o.remove());
     }
     sCancelBtn.onclick = () => { resetStudentForm(); sMsgShow(''); };
 
@@ -2172,6 +2126,14 @@ See you soon!
       sName.value = s.name || '';
       sPhone.value = s.phone || '';
       sEmail.value = s.email || '';
+      dropRetiredStudentOption();
+      // A historical student in a retired class type (Women's Class) keeps that type when edited;
+      // retired types aren't offered for new students.
+      if (s.classType && STUDENT_TYPE[s.classType] && !sType.querySelector('option[value="' + s.classType + '"]')) {
+        const o = document.createElement('option');
+        o.value = s.classType; o.textContent = STUDENT_TYPE[s.classType] + ' (retired)'; o.dataset.retired = '1';
+        sType.appendChild(o);
+      }
       sType.value = s.classType || 'ccl';
       sDate.value = s.classDate || '';
       sPaid.value = s.paid || 'pending';
@@ -2721,7 +2683,7 @@ See you soon!
     renderQuickReview();
 
     // ════════ CLASS PRICING ════════
-    // settings/pricing (editors only) holds each website price plus, for the three fixed-price regular
+    // settings/pricing (editors only) holds each website price plus, for the two fixed-price regular
     // classes, the Stripe amount an editor has confirmed the fixed Payment Link charges. The Stripe
     // URLs themselves stay fixed in code (booking.js) and can't be edited here. Saving also writes the
     // public settings/publicPricing: the Private "From" price and, per regular class, the price it can
@@ -2732,7 +2694,6 @@ See you soon!
     const PRICE_FIELDS = [
       { field: 'ccl16',       type: 'ccl',     label: '16-Hour CCL Certification', checkout: CHECKOUTS.ccl },
       { field: 'renewal3',    type: 'renewal', label: '3-Hour Renewal',            checkout: CHECKOUTS.renewal },
-      { field: 'womens',      type: 'womens',  label: "Women's Class",             checkout: CHECKOUTS.womens },
       { field: 'privateFrom', type: null,      label: 'Private Training (starting price)', checkout: PRIVATE_LINK, isPrivate: true }
     ];
     const REGULAR_FIELDS = PRICE_FIELDS.filter(f => !f.isPrivate);

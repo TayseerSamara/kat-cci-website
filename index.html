@@ -2604,7 +2604,6 @@ header {
             <option value="" disabled selected>Which class are you interested in?</option>
             <option>16-Hour CCL Course</option>
             <option>3-Hour Renewal</option>
-            <option>Women's Class</option>
             <option>Private / Group Class</option>
             <option>Not sure yet</option>
           </select>
@@ -2676,26 +2675,8 @@ header {
           'Course materials included',
           'Post-class support & questions answered'
         ]
-      },
-      womens: {
-        tag: "Women's Class",
-        title: "Women's Firearm Training",
-        duration: 'Women-only learning environment',
-        dayLabel: '4 hours',
-        fineprint: '',
-        smsLabel: "the Women's Class",
-        formLabel: "Women's Class",
-        paired: false,
-        features: [
-          'Women-only beginner firearm safety course',
-          'No experience needed',
-          'Hands-on firearm handling practice',
-          'Situational awareness and defensive mindset',
-          'Live-fire instruction with guidance',
-          'Perfect for first-time firearm owners and beginners',
-          'Build confidence, safety knowledge, and responsible firearm handling skills'
-        ]
       }
+      // Women's Class is no longer offered (2026-11-19): old Women's class records are not shown.
     };
 
     const grid = document.getElementById('upcomingGrid');
@@ -2892,8 +2873,8 @@ header {
   </script>
 
   <!-- Promo popup, once per browser session: offers and checkout links live in promos.js -->
-  <script src="promos.js"></script>
-  <script src="booking.js"></script>
+  <script src="promos.js?v=20261119"></script>
+  <script src="booking.js?v=20261119"></script>
   <script>
     (function () {
       var P = window.KAT_PROMOS;

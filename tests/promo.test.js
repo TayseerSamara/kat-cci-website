@@ -8,7 +8,6 @@ const BASE = process.env.SITE || 'http://localhost:5058';
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const REAL_PROMOS = process.env.REAL_PROMOS !== '0';
 const CCL_LINK = REAL_PROMOS ? 'https://buy.stripe.com/bJe28rcY86Z9cEYeJJak005' : 'https://buy.stripe.com/test_PROMO_CCL';
-const WOMENS_LINK = REAL_PROMOS ? 'https://buy.stripe.com/4gM5kD6zK4R15cwbxxak006' : 'https://buy.stripe.com/test_PROMO_WOMENS';
 const AD = '?utm_source=google&utm_medium=cpc&utm_campaign=fall_promo&utm_term=ccl+class&gclid=Cj0KCQ-test_123';
 const NOTE = 'Limited-time website promotion — book through this offer to receive the promotional price.';
 const PILL = '🎉 October Special — View Offers';
@@ -27,8 +26,7 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
       await ctx.route(/\/promos\.js(\?|$)/, async r => {
         const res = await r.fetch();
         const body = (await res.text())
-          .replace(/(id: 'ccl-2026-10-17'[\s\S]*?checkoutUrl: )'[^']*'/, `$1'${links ? CCL_LINK : ''}'`)
-          .replace(/(id: 'womens-2026-10-24'[\s\S]*?checkoutUrl: )'[^']*'/, `$1'${links ? WOMENS_LINK : ''}'`);
+          .replace(/(id: 'ccl-2026-10-17'[\s\S]*?checkoutUrl: )'[^']*'/, `$1'${links ? CCL_LINK : ''}'`);
         r.fulfill({ response: res, body });
       });
     }
@@ -47,12 +45,12 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   await page.goto(BASE + '/' + AD);
   ok(await popupShown(page), 'popup opens');
   const cards = await page.$$eval('#promoModal a.promo-card', as => as.map(a => ({ href: a.getAttribute('href'), text: a.innerText.replace(/\s+/g, ' ').trim(), s: a.querySelector('s').textContent, price: a.querySelector('.promo-price').textContent })));
-  ok(cards.length === 2 && (await page.textContent('#promoModal .promo-note')) === NOTE, 'two offers + website-promotion note');
+  ok(cards.length === 1 && (await page.textContent('#promoModal .promo-note')) === NOTE, "one offer (CCL only; Women's promo removed) + website-promotion note");
+  ok(!(await page.$('[data-promo="womens-2026-10-24"]')) && !/Women/i.test(await page.textContent('#promoModal')), "no Women's offer in the popup");
   const cclBadge = await page.$eval('[data-promo="ccl-2026-10-17"] .promo-badge', e => e.textContent);
   const cclSave = await page.$eval('[data-promo="ccl-2026-10-17"] .promo-save', e => e.textContent);
   ok(cclBadge === 'SPECIAL PROMO' && /Sat, Oct 17 & Sun, Oct 18 · 10:00 AM/.test(cards[0].text), 'CCL: SPECIAL PROMO, Oct 17 & 18, 10:00 AM');
   ok(cards[0].s === '$175' && cards[0].price === '$160' && cclSave === 'SAVE $15' && /RESERVE FOR \$160 →/.test(cards[0].text) && !/\$200|\$40|%/.test(cards[0].text), 'CCL: $175 → $160, SAVE $15, no $200/$40/%');
-  ok(cards[1].s === '$125' && cards[1].price === '$100' && /SAVE \$25 · 20% OFF/.test(cards[1].text) && /RESERVE FOR \$100 →/.test(cards[1].text), "Women's: $125 → $100, SAVE $25 · 20% OFF");
   ok((await page.textContent('#promoTitle')) === 'Special class offers', 'headline makes no percentage claim with CCL shown');
   ok(!FEE.test(await page.evaluate(() => document.body.innerText)), 'homepage + popup: no processing-fee wording');
   ok(cards[0].href === '/reserve?promo=ccl-2026-10-17&utm_source=google&utm_medium=cpc&utm_campaign=fall_promo&utm_term=ccl+class&gclid=Cj0KCQ-test_123', 'CCL card links to its reserve page with ad parameters');
@@ -70,11 +68,8 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   await page.goto(BASE + '/');
   ok(!(await popupShown(page)) && await pillVisible(page) && (await page.textContent('#promoPill')) === PILL, 'same session: no automatic popup, October Special button shown');
   await page.goto(BASE + '/reserve?promo=womens-2026-10-24');
-  const wsum = (await page.textContent('#promoSummary')).replace(/\s+/g, ' ');
-  ok((await page.$$('.ack-check')).length === 3 && /Promotional price \$100/.test(wsum) && wsum.includes('You save $25 (20% off)'), "Women's reserve page: 3 acknowledgments, $100, 20% off");
-  await checkAll(page); await page.click('#continueBtn'); await page.waitForTimeout(800);
-  const u2 = new URL(state.stripe.pop() || 'https://x/');
-  ok(u2.origin + u2.pathname === WOMENS_LINK && u2.searchParams.get('client_reference_id') === 'womens-2026-10-24__gclid_Cj0KCQ-test_123', "Women's → its checkout, keeping this visit's attribution");
+  await page.waitForSelector('#errorFlow', { state: 'visible' });
+  ok(/no longer available/.test(await page.textContent('#errorFlow')) && !(await page.isVisible('#ackFlow')) && state.stripe.length === 0, "old Women's promo link: offer no longer available, no checkout");
   await page.goto(BASE + '/reserve?promo=ccl-2026-10-17&to=' + encodeURIComponent('https://buy.stripe.com/SOMETHING_ELSE'));
   await checkAll(page); await page.click('#continueBtn'); await page.waitForTimeout(800);
   const u3 = new URL(state.stripe.pop() || 'https://x/');
@@ -97,7 +92,7 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
     const overlap = !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
     ok(!overlap && a.bottom <= viewport.height, name + ': reopen button on screen, not covering Reserve');
     await page.click('#promoPill');
-    ok(await popupShown(page) && (await page.$$('#promoModal a.promo-card')).length === 2, name + ': button reopens the popup');
+    ok(await popupShown(page) && (await page.$$('#promoModal a.promo-card')).length === 1, name + ': button reopens the popup');
     await page.keyboard.press('Escape'); await page.waitForTimeout(400);
     await page.reload();
     ok(!(await popupShown(page)) && await pillVisible(page), name + ': reload → no automatic popup');
@@ -107,11 +102,11 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   ({ ctx, page, state } = await ctxWith());
   await page.goto(BASE + '/');
   await popupShown(page);
-  await page.click('[data-promo="womens-2026-10-24"] .promo-price');
-  await page.waitForURL(/\/reserve\?promo=womens-2026-10-24/);
+  await page.click('[data-promo="ccl-2026-10-17"] .promo-price');
+  await page.waitForURL(/\/reserve\?promo=ccl-2026-10-17/);
   await checkAll(page); await page.click('#continueBtn'); await page.waitForTimeout(800);
   const u4 = new URL(state.stripe.pop() || 'https://x/');
-  ok(u4.origin + u4.pathname === WOMENS_LINK && ![...u4.searchParams.keys()].some(k => k.startsWith('utm_')) && u4.searchParams.get('client_reference_id') === 'womens-2026-10-24', 'non-ad visitor: clean checkout link');
+  ok(u4.origin + u4.pathname === CCL_LINK && ![...u4.searchParams.keys()].some(k => k.startsWith('utm_')) && u4.searchParams.get('client_reference_id') === 'ccl-2026-10-17', 'non-ad visitor: clean checkout link');
   await ctx.close();
 
   console.log('When the popup must not appear');
@@ -121,20 +116,20 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   await ctx.close();
   ({ ctx, page, state } = await ctxWith({ at: '2026-10-17T09:00:00-05:00' }));
   await page.goto(BASE + '/');
-  ok(await popupShown(page) && (await page.$$('#promoModal a.promo-card')).length === 1 && (await page.textContent('#promoTitle')) === 'Save 20% on upcoming classes', "Oct 17: only the Women's offer, headline may say 20%");
+  ok(!(await popupShown(page)) && !(await page.$('#promoPill')), 'after the CCL offer ends (Oct 17): nothing shown');
   await ctx.close();
-  ({ ctx, page, state } = await ctxWith({ at: '2026-10-24T08:00:00-05:00' }));
+  ({ ctx, page, state } = await ctxWith({ at: '2026-11-19T12:00:00-06:00' }));
   await page.goto(BASE + '/');
-  ok(!(await popupShown(page)) && !(await page.$('#promoPill')), 'after both offers end: nothing shown');
+  ok(!(await popupShown(page)) && !(await page.$('#promoPill')), 'today (Nov 19): no promotion popup or button');
   await ctx.close();
 
   console.log('Regular reservation link unchanged');
   ({ ctx, page, state } = await ctxWith());
-  const REG = 'https://buy.stripe.com/14A5kDf6g3MXdJ28llak000';
+  const REG = 'https://buy.stripe.com/4gM7sLaQ0cjt0Wg9ppak007';
   await page.goto(BASE + '/reserve?c=ccl16&to=' + encodeURIComponent(REG));
   ok(!(await page.isVisible('#promoSummary')) && (await page.textContent('#continueBtn')).trim() === 'Continue to Secure Payment →', 'no promo box; normal button');
   await checkAll(page); await page.click('#continueBtn'); await page.waitForTimeout(800);
-  ok(state.stripe.pop() === REG, 'regular link → regular $175 checkout');
+  ok(state.stripe.pop() === REG, 'regular link → regular $200 CCL checkout');
   await page.goto(BASE + '/reserve?c=ccl16&to=' + encodeURIComponent('https://evil.example/pay'));
   ok(/isn't valid/.test(await page.textContent('#errorFlow')), 'non-Stripe destinations refused');
   ok(state.errors.length === 0, 'no JavaScript errors');

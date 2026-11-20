@@ -18,10 +18,12 @@ function token() {
 }
 const who = (email, verified = true) => ({ uid: 'u-' + email, token: { email, email_verified: verified } });
 const EDITOR = 'nora@katcci.com', TONY = 'tony@katcci.com', OTHER = 'someone@gmail.com';
-const PR_OLD = { ccl16: 175, renewal3: 125, womens: 125, privateFrom: 200, updatedBy: EDITOR };
-const PR_MATCH = { ...PR_OLD, ccl16Stripe: 175, renewal3Stripe: 125, womensStripe: 125 };
-const PUB_OK = { privateFrom: 200, ccl16: 175, renewal3: 125, womens: 125 };
-const PRICING = (o, by = EDITOR) => ({ ccl16: 175, renewal3: 125, womens: 125, privateFrom: 250, ccl16Stripe: 175, renewal3Stripe: 125, womensStripe: 125, updatedBy: by, ...o });
+// Production settings/pricing before the Women's removal (still has womens/womensStripe).
+const PR_LEGACY = { ccl16: 210, renewal3: 150, womens: 125, privateFrom: 250, ccl16Stripe: 175, renewal3Stripe: 125, womensStripe: 125, updatedBy: EDITOR };
+const PR_OLD = { ccl16: 200, renewal3: 140, privateFrom: 250, updatedBy: EDITOR };                 // no confirmed Stripe amounts
+const PR_MATCH = { ...PR_OLD, ccl16Stripe: 200, renewal3Stripe: 140 };                              // the intended new values
+const PUB_OK = { privateFrom: 250, ccl16: 200, renewal3: 140 };
+const PRICING = (o, by = EDITOR) => ({ ccl16: 200, renewal3: 140, privateFrom: 250, ccl16Stripe: 200, renewal3Stripe: 140, updatedBy: by, ...o });
 
 // [expect, user|null, method, path, data|undefined, label]
 const CASES = [
@@ -30,16 +32,20 @@ const CASES = [
   ['ALLOW', null, 'get', 'settings/publicPricing', undefined, 'public can read settings/publicPricing'],
   ['DENY', null, 'create', 'settings/publicPricing', PUB_OK, 'public cannot write it', true, PR_MATCH],
   ['DENY', OTHER, 'update', 'settings/publicPricing', PUB_OK, 'other Google accounts cannot write it', true, PR_MATCH],
-  ['ALLOW', EDITOR, 'create', 'settings/publicPricing', PUB_OK, 'Nora: all matched → public prices 175/125/125, From 200', true, PR_MATCH],
-  ['ALLOW', TONY, 'update', 'settings/publicPricing', { privateFrom: 200, ccl16: 185, renewal3: 125, womens: 125 }, 'tony@katcci.com: CCL 185 confirmed in Stripe → public 185', true, { ...PR_MATCH, ccl16: 185, ccl16Stripe: 185 }],
-  ['ALLOW', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 200, ccl16: null, renewal3: 125, womens: 125 }, 'CCL website 185 vs Stripe 175 → public ccl16 null (paused)', true, { ...PR_MATCH, ccl16: 185 }],
-  ['DENY', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 200, ccl16: 185, renewal3: 125, womens: 125 }, 'mismatch cannot be published as bookable', true, { ...PR_MATCH, ccl16: 185 }],
-  ['DENY', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 200, ccl16: 150, renewal3: 125, womens: 125 }, 'public price different from saved pricing refused', true, PR_MATCH],
-  ['DENY', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 200, ccl16: null, renewal3: 125, womens: 125 }, 'cannot null a matched class', true, PR_MATCH],
-  ['DENY', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 275, ccl16: 175, renewal3: 125, womens: 125 }, 'privateFrom must equal saved pricing', true, PR_MATCH],
+  ['ALLOW', EDITOR, 'create', 'settings/publicPricing', PUB_OK, 'Nora: CCL 200/200, Renewal 140/140 → public 200 / 140, From 250', true, PR_MATCH],
+  ['ALLOW', TONY, 'update', 'settings/publicPricing', PUB_OK, 'tony@katcci.com: the one-time migration write (200 / 140 / 250)', true, PR_MATCH],
+  ['ALLOW', TONY, 'update', 'settings/publicPricing', { privateFrom: 250, ccl16: 215, renewal3: 140 }, 'CCL 215 confirmed in Stripe → public 215', true, { ...PR_MATCH, ccl16: 215, ccl16Stripe: 215 }],
+  ['ALLOW', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 250, ccl16: null, renewal3: 140 }, 'CCL website 215 vs Stripe 200 → public ccl16 null (paused)', true, { ...PR_MATCH, ccl16: 215 }],
+  ['DENY', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 250, ccl16: 215, renewal3: 140 }, 'mismatch cannot be published as bookable', true, { ...PR_MATCH, ccl16: 215 }],
+  ['DENY', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 250, ccl16: 150, renewal3: 140 }, 'public price different from saved pricing refused', true, PR_MATCH],
+  ['DENY', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 250, ccl16: null, renewal3: 140 }, 'cannot null a matched class', true, PR_MATCH],
+  ['DENY', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 275, ccl16: 200, renewal3: 140 }, 'privateFrom must equal saved pricing', true, PR_MATCH],
+  ['DENY', EDITOR, 'update', 'settings/publicPricing', { ...PUB_OK, womens: 125 }, "obsolete womens field refused", true, PR_MATCH],
+  ['DENY', EDITOR, 'update', 'settings/publicPricing', { ...PUB_OK, womens: null }, "obsolete womens field refused even as null", true, PR_MATCH],
   ['DENY', EDITOR, 'update', 'settings/publicPricing', { ...PUB_OK, checkoutUrl: 'https://buy.stripe.com/x' }, 'extra field (e.g. a Stripe link) refused', true, PR_MATCH],
-  ['DENY', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 200 }, 'missing regular fields refused', true, PR_MATCH],
-  ['DENY', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 200, ccl16: 175, renewal3: 125, womens: 125 }, 'refused while settings/pricing lacks confirmed Stripe amounts (today\'s production doc)', true, PR_OLD],
+  ['DENY', EDITOR, 'update', 'settings/publicPricing', { privateFrom: 250 }, 'missing regular fields refused', true, PR_MATCH],
+  ['DENY', EDITOR, 'update', 'settings/publicPricing', PUB_OK, 'refused while settings/pricing lacks confirmed Stripe amounts', true, PR_OLD],
+  ['DENY', EDITOR, 'update', 'settings/publicPricing', PUB_OK, "refused if settings/pricing still held the old Women's fields (must be replaced in the same batch)", true, PR_LEGACY],
   ['DENY', EDITOR, 'update', 'settings/publicPricing', PUB_OK, 'refused when settings/pricing does not exist', true, 'none'],
   ['DENY', EDITOR, 'delete', 'settings/publicPricing', undefined, 'delete refused'],
   ['DENY', TONY, 'update', 'settings/publicPricing', PUB_OK, 'unverified editor email refused', false, PR_MATCH],
@@ -49,11 +55,14 @@ const CASES = [
   ['ALLOW', EDITOR, 'get', 'settings/pricing', undefined, 'editors can read settings/pricing'],
   ['DENY', null, 'update', 'settings/pricing', PRICING({}), 'public cannot write settings/pricing'],
   ['DENY', OTHER, 'update', 'settings/pricing', PRICING({}, OTHER), 'other accounts cannot write settings/pricing'],
-  ['ALLOW', EDITOR, 'update', 'settings/pricing', PRICING({ ccl16: 185, ccl16Stripe: 185 }), 'Nora can save prices + confirmed Stripe amounts', true, undefined, true],
-  ['ALLOW', EDITOR, 'update', 'settings/pricing', PRICING({ ccl16: 185 }), 'Nora can save a website/Stripe mismatch (booking then paused)', true, undefined, true],
-  ['DENY', EDITOR, 'update', 'settings/pricing', { ccl16: 175, renewal3: 125, womens: 125, privateFrom: 250, updatedBy: EDITOR }, 'missing confirmed Stripe amounts refused', true, undefined, true],
+  ['ALLOW', TONY, 'update', 'settings/pricing', PRICING({}, TONY), 'migration: CCL 200/200, Renewal 140/140, Private 250, stamped by tony@katcci.com', true, undefined, true],
+  ['ALLOW', EDITOR, 'update', 'settings/pricing', PRICING({ ccl16: 215, ccl16Stripe: 215 }), 'Nora can save prices + confirmed Stripe amounts', true, undefined, true],
+  ['ALLOW', EDITOR, 'update', 'settings/pricing', PRICING({ ccl16: 215 }), 'Nora can save a website/Stripe mismatch (booking then paused)', true, undefined, true],
+  ['DENY', EDITOR, 'update', 'settings/pricing', PRICING({ womens: 125, womensStripe: 125 }), "obsolete womens / womensStripe refused", true, undefined, true],
+  ['DENY', EDITOR, 'update', 'settings/pricing', PRICING({ womens: 125 }), "obsolete womens alone refused", true, undefined, true],
+  ['DENY', EDITOR, 'update', 'settings/pricing', { ccl16: 200, renewal3: 140, privateFrom: 250, updatedBy: EDITOR }, 'missing confirmed Stripe amounts refused', true, undefined, true],
   ['DENY', EDITOR, 'update', 'settings/pricing', PRICING({ ccl16Stripe: 0 }), 'zero Stripe amount refused', true, undefined, true],
-  ['DENY', EDITOR, 'update', 'settings/pricing', PRICING({ womensStripe: '125' }), 'text Stripe amount refused', true, undefined, true],
+  ['DENY', EDITOR, 'update', 'settings/pricing', PRICING({ renewal3Stripe: '140' }), 'text Stripe amount refused', true, undefined, true],
   ['DENY', EDITOR, 'update', 'settings/pricing', PRICING({ ccl16: -5 }), 'invalid price refused', true, undefined, true],
   ['DENY', EDITOR, 'update', 'settings/pricing', PRICING({ checkoutUrl: 'https://buy.stripe.com/x' }), 'Stripe URL / extra field refused', true, undefined, true],
   ['DENY', EDITOR, 'update', 'settings/pricing', PRICING({}, OTHER), 'updatedBy must be the saving editor', true, undefined, true],

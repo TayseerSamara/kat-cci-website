@@ -24,20 +24,8 @@
       showPercent: false,
       fineprint: '+ $150 state fee',
       checkoutUrl: 'https://buy.stripe.com/bJe28rcY86Z9cEYeJJak005'   // $160.00 (verified)
-    },
-    {
-      id: 'womens-2026-10-24',
-      classKey: 'womens',
-      title: "Women's Class",
-      dates: 'Sat, Oct 24',
-      time: '12:00 PM',
-      showUntil: '2026-10-23',
-      regular: 125,
-      price: 100,
-      showPercent: true,                    // exactly 20% off
-      fineprint: '',
-      checkoutUrl: 'https://buy.stripe.com/4gM5kD6zK4R15cwbxxak006'   // $100.00 (verified)
     }
+    // The Women's Class promotion was removed on 2026-11-19 (Women's Class is no longer offered).
   ];
 
   // Campaign wording used by the homepage popup and its reopen button.

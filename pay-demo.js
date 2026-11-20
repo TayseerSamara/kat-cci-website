@@ -30,8 +30,9 @@ function isoInDays(n) {
 // ── Sample data (555-01xx numbers and example.com addresses only) ──
 const seed = {
   classes: {
-    c1: { type: 'ccl', date1: isoInDays(9), date2: isoInDays(10), endDate: isoInDays(10), time: '09:00', price: 175, createdAt: ts(12), updatedAt: ts(12) },
-    c2: { type: 'renewal', date1: isoInDays(16), date2: '', endDate: isoInDays(16), time: '18:00', price: 125, createdAt: ts(8), updatedAt: ts(8) },
+    c1: { type: 'ccl', date1: isoInDays(9), date2: isoInDays(10), endDate: isoInDays(10), time: '09:00', price: 200, createdAt: ts(12), updatedAt: ts(12) },
+    c2: { type: 'renewal', date1: isoInDays(16), date2: '', endDate: isoInDays(16), time: '18:00', price: 140, createdAt: ts(8), updatedAt: ts(8) },
+    // c3/c4: legacy Women's Class records (type retired 2026-11-19) — kept to exercise history handling.
     c3: { type: 'womens', date1: isoInDays(-5), date2: '', endDate: isoInDays(-5), time: '10:00', price: 125, createdAt: ts(30), updatedAt: ts(30) },
     c4: { type: 'womens', date1: isoInDays(20), date2: '', endDate: isoInDays(20), time: '12:00', price: 125, createdAt: ts(2), updatedAt: ts(2) }
   },
@@ -56,9 +57,9 @@ const seed = {
           requestedAt: ts(40), requestedBy: 'tony@midwayspeedpark.com', studentId: null, linked: 'manual', status: 'opened_email' }
   },
   settings: FRESH ? {} : {
-    pricing: { ccl16: 175, renewal3: 125, womens: 125, privateFrom: 250,
-               ccl16Stripe: 175, renewal3Stripe: 125, womensStripe: 125, updatedAt: ts(5), updatedBy: 'nora@katcci.com' },
-    publicPricing: { privateFrom: 250, ccl16: 175, renewal3: 125, womens: 125 },
+    pricing: { ccl16: 200, renewal3: 140, privateFrom: 250,
+               ccl16Stripe: 200, renewal3Stripe: 140, updatedAt: ts(5), updatedBy: 'nora@katcci.com' },
+    publicPricing: { privateFrom: 250, ccl16: 200, renewal3: 140 },
     reviews: {
       googleReviewUrl: 'https://g.page/r/DEMO-ONLY/review',
       defaultMessage: 'Hello, thank you for training with KAT CCI! If you have a minute, we would really appreciate a quick Google review. It helps other students find us:\n\n{link}\n\n— Kat CCI',
