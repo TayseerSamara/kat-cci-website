@@ -3,7 +3,7 @@
 // class records (TEST*) cover exact values. settings/publicPricing is always a stand-in here.
 // Stripe navigation is intercepted: no checkout page is loaded and nothing is paid.
 const { chromium } = require('playwright-core');
-const { stubGoogle } = require('./google-stub');
+const { stubGoogle, fillContact } = require('./google-stub');
 
 const BASE = process.env.SITE || 'http://localhost:5058';
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -60,6 +60,7 @@ const STANDINS = {
     return /isn't available for online booking/.test(await page.textContent('#errorFlow')) && !(await page.isVisible('#ackFlow'));
   };
   const pay = async (page, state) => {
+    await fillContact(page);
     ok(await page.isDisabled('#continueBtn'), '  payment button unavailable before acknowledgments');
     const checks = await page.$$('.ack-check');
     for (const c of checks.slice(0, -1)) await c.check();

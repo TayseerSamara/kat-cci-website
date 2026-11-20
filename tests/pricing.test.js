@@ -273,7 +273,7 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   // Live data: each card's price is its type's published central price (none shown when paused).
   const cards = await page.$$eval('#upcomingGrid .uc-card[data-dynamic]', els => els.map(e => ({ title: e.querySelector('.uc-title').textContent, price: e.querySelector('.uc-price') ? e.querySelector('.uc-price').textContent : '', link: !!e.querySelector('a.btn-reserve') })));
   const livePub = await page.evaluate(() => window.KAT_BOOKING.loadPublicPricing());
-  const TYPE_KEY = [['16-Hour CCL', 'ccl16'], ['CCL Renewal', 'renewal3']];
+  const TYPE_KEY = [['16-Hour CCL', 'ccl16'], ['3-Hour Renewal', 'renewal3']];
   ok(cards.every(c => !/Women/i.test(c.title)), "no Women's Class card on the homepage");
   const expectFor = c => { const k = (TYPE_KEY.find(([t]) => c.title.includes(t)) || [])[1]; const v = k && livePub ? livePub[k] : null; return typeof v === 'number' ? '$' + v : ''; };
   ok(cards.every(c => c.price === expectFor(c) && c.link === !!expectFor(c)),

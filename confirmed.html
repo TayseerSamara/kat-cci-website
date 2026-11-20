@@ -178,6 +178,7 @@
   </footer>
 
   <script src="booking.js?v=20261119b"></script>
+  <script src="registration.js?v=20261120"></script>
   <script>
     // Google Ads "KAT CCI Paid Class Registration" conversion. Fires only after a real Stripe
     // checkout: Stripe returns with ?session_id={CHECKOUT_SESSION_ID}, and /reserve stored the
@@ -225,6 +226,59 @@
           if (window.KAT_BOOKING.validPrice(current) && current === pending.value) report();
         });
       }
+    })();
+  </script>
+  <script>
+    // Registration confirmation emails (EmailJS): the customer's confirmation and Nora's notification.
+    // Separate from the Google Ads conversion above (which it never touches). Sent only when Stripe
+    // returned a Stripe-format Checkout Session id AND /reserve stored a current pending registration
+    // (6-hour limit, regular class, amount = the class's current online price). Each template is sent at
+    // most once per session id in this browser; failures never change this page. The status is kept in
+    // window.KAT_EMAIL_STATUS / the console without any customer details.
+    (function () {
+      var R = window.KAT_REGISTRATION, B = window.KAT_BOOKING;
+      var status = window.KAT_EMAIL_STATUS = { state: 'idle', customer: 'not sent', nora: 'not sent' };
+      function done(state) {
+        status.state = state;
+        try { console.info('[KAT CCI] confirmation emails: ' + state + ' (customer: ' + status.customer + ', nora: ' + status.nora + ')'); } catch (e) {}
+      }
+      var sessionId = new URLSearchParams(window.location.search).get('session_id') || '';
+      if (!/^cs_(live|test)_[A-Za-z0-9]{10,}$/.test(sessionId)) return done('skipped: no valid checkout session');
+      if (!R || !B) return done('skipped: unavailable');
+      var reg = R.read();
+      if (!reg) return done('skipped: no pending registration');
+      // Bound to the first checkout session it is used with; never reused for another session id.
+      if (reg.sessionId && reg.sessionId !== sessionId) return done('skipped: registration belongs to another checkout');
+      status.state = 'checking';
+
+      B.loadPublicPricing().then(function (pub) {
+        var current = pub ? pub[reg.classKey] : null;
+        if (!(B.validPrice(current) && current === reg.amount)) return done('skipped: amount is not the current class price');
+        reg.sessionId = sessionId;
+        R.save(reg);
+        var params = R.templateParams(reg, sessionId);
+        var sent = R.sentFor(sessionId);
+        var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+        // One template: skip if already sent for this session; otherwise up to 3 attempts.
+        function deliver(which) {
+          if (sent[which]) { status[which] = 'already sent'; return Promise.resolve(true); }
+          status[which] = 'sending';
+          var attempt = function (n) {
+            return R.sendTemplate(which, params).then(function (ok) {
+              if (ok) { R.markSent(sessionId, which); status[which] = 'sent'; return true; }
+              if (n >= 3) { status[which] = 'failed'; return false; }
+              return wait(n * 1500).then(function () { return attempt(n + 1); });
+            });
+          };
+          return attempt(1);
+        }
+        return deliver('customer').then(function (a) {
+          return deliver('nora').then(function (b) {
+            if (a && b) { R.clear(); done('complete'); }
+            else done('incomplete — will retry the unsent template on the next visit to this page');
+          });
+        });
+      }).catch(function () { done('error'); });
     })();
   </script>
 

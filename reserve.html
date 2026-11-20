@@ -122,6 +122,27 @@
     .ack span { font-size: .92rem; }
     .ack strong { color: var(--navy); }
 
+    /* Contact details (scheduled-class bookings) */
+    .contact { margin: 4px 0 18px; }
+    .contact h2 { font-size: 1rem; color: var(--navy); margin-bottom: 4px; }
+    .contact .contact-note { font-size: .85rem; color: var(--text-light); margin-bottom: 12px; }
+    .contact .field { margin-bottom: 12px; }
+    .contact label { display: block; font-size: .88rem; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+    .contact input {
+      width: 100%;
+      font: inherit;
+      font-size: 1rem;
+      padding: 11px 12px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 10px;
+      background: var(--white);
+      color: var(--text);
+    }
+    .contact input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(176,106,117,.15); }
+    .contact input.invalid { border-color: #dc2626; }
+    .contact .field-error { display: none; color: #b91c1c; font-size: .82rem; margin-top: 4px; }
+    .contact .field.show-error .field-error { display: block; }
+
     .continue-btn {
       width: 100%;
       margin-top: 18px;
@@ -241,6 +262,8 @@
         <div class="promo-summary" id="promoSummary" style="display:none;"></div>
         <p class="intro">Please review and check each item below. Once all are confirmed, you'll continue to our secure payment page.</p>
 
+        <div class="contact" id="contactBlock" style="display:none;"></div>
+
         <div id="ackList"></div>
 
         <button class="continue-btn" id="continueBtn" disabled>Continue to Secure Payment &rarr;</button>
@@ -271,6 +294,7 @@
 
   <script src="promos.js?v=20261119b"></script>
   <script src="booking.js?v=20261119b"></script>
+  <script src="registration.js?v=20261120"></script>
   <script>
     (function () {
       var params = new URLSearchParams(window.location.search);
@@ -442,10 +466,51 @@
 
         var checks = Array.prototype.slice.call(document.querySelectorAll('.ack-check'));
         var continueBtn = document.getElementById('continueBtn');
+        var R = window.KAT_REGISTRATION;
+
+        // Scheduled-class bookings: the customer's contact details for the registration confirmation.
+        // Plain inputs (no <form>), so they can never be submitted into a URL.
+        var contact = null;
+        if (booked && R) {
+          var cb = document.getElementById('contactBlock');
+          cb.innerHTML =
+            '<h2>Your contact details</h2>' +
+            '<p class="contact-note">We use these to confirm your registration and reach you about your class.</p>' +
+            '<div class="field"><label for="custName">Full name</label>' +
+              '<input id="custName" type="text" autocomplete="name" maxlength="100" required>' +
+              '<div class="field-error">Please enter your full name.</div></div>' +
+            '<div class="field"><label for="custEmail">Email address</label>' +
+              '<input id="custEmail" type="email" autocomplete="email" inputmode="email" maxlength="254" autocapitalize="off" spellcheck="false" required>' +
+              '<div class="field-error">Please enter a valid email address.</div></div>' +
+            '<div class="field"><label for="custPhone">Mobile phone</label>' +
+              '<input id="custPhone" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" placeholder="(312) 555-0123" required>' +
+              '<div class="field-error">Please enter a valid 10-digit US mobile number.</div></div>';
+          cb.style.display = '';
+          document.querySelector('#ackFlow .intro').textContent =
+            "Please enter your contact details, then review and check each item below. Once all are confirmed, you'll continue to our secure payment page.";
+          contact = {
+            name: { el: document.getElementById('custName'), ok: R.validName },
+            email: { el: document.getElementById('custEmail'), ok: R.validEmail },
+            phone: { el: document.getElementById('custPhone'), ok: R.validPhone }
+          };
+          Object.keys(contact).forEach(function (k) {
+            var f = contact[k];
+            var show = function () {
+              var bad = !f.ok(f.el.value);
+              f.el.classList.toggle('invalid', bad);
+              f.el.closest('.field').classList.toggle('show-error', bad);
+            };
+            f.el.addEventListener('input', function () { if (f.el.classList.contains('invalid')) show(); sync(); });
+            f.el.addEventListener('blur', function () { if (f.el.value.trim()) show(); sync(); });
+          });
+        }
+        function contactValid() {
+          return !contact || Object.keys(contact).every(function (k) { return contact[k].ok(contact[k].el.value); });
+        }
 
         function sync() {
           var allChecked = checks.every(function (ch) { return ch.checked; });
-          continueBtn.disabled = !allChecked;
+          continueBtn.disabled = !(allChecked && contactValid());
         }
 
         checks.forEach(function (ch) {
@@ -476,14 +541,49 @@
           } catch (e) {}
         }
 
+        // Pending registration for the confirmation emails on /confirmed: the customer's contact details
+        // plus the trusted class and amount (booking.js / settings/publicPricing — never the URL).
+        // Only scheduled-class bookings have one; any other checkout clears an older one.
+        function longDate(iso, withYear) {
+          var p = iso.split('-').map(Number);
+          var o = { weekday: 'long', month: 'long', day: 'numeric' };
+          if (withYear) o.year = 'numeric';
+          return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', o);
+        }
+        function clockTime(t) {
+          if (!t || !/^\d{1,2}:\d{2}$/.test(t)) return '';
+          var p = t.split(':').map(Number);
+          return ((p[0] % 12) || 12) + ':' + String(p[1]).padStart(2, '0') + ' ' + (p[0] >= 12 ? 'PM' : 'AM');
+        }
+        function rememberPendingRegistration() {
+          if (!R) return;
+          if (!booked) { R.clear(); return; }
+          var entry = window.KAT_BOOKING.entryFor(booked, pubPricing);
+          var two = entry.paired && booked.date2 && booked.date2 !== booked.date1;
+          R.save({
+            customer_name: R.cleanName(contact.name.el.value),
+            customer_email: R.cleanEmail(contact.email.el.value),
+            customer_phone: R.formatPhone(contact.phone.el.value),
+            class_name: entry.title,
+            class_date: two ? longDate(booked.date1, false) + ' & ' + longDate(booked.date2, true) : longDate(booked.date1, true),
+            class_time: clockTime(booked.time),
+            amount: entry.price,
+            classId: booked.id,
+            classType: booked.type,
+            classKey: entry.classKey,
+            at: Date.now()
+          });
+        }
+
         continueBtn.addEventListener('click', function () {
-          if (checks.every(function (ch) { return ch.checked; })) {
+          if (checks.every(function (ch) { return ch.checked; }) && contactValid()) {
             // Staff-texted links: give public pricing a moment to load so the conversion value is known.
             var ready = (promo || booked) ? Promise.resolve() :
               Promise.race([pubPricingLoad, new Promise(function (r) { setTimeout(r, 3000); })]);
             continueBtn.disabled = true;
             ready.then(function () {
               rememberPendingPurchase();
+              rememberPendingRegistration();
               window.location.href = to;
             });
           }

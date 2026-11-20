@@ -3,7 +3,7 @@
 // Stripe redirects (?session_id=cs_...). Events are read from window.dataLayer; Google requests are
 // answered locally, so nothing is sent to the real Google Ads account.
 const { chromium } = require('playwright-core');
-const { stubGoogle } = require('./google-stub');
+const { stubGoogle, fillContact } = require('./google-stub');
 
 const BASE = process.env.SITE || 'http://localhost:5058';
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -57,7 +57,7 @@ const STANDINS = {
   async function checkout(page, reservePath) {
     await page.goto(BASE + reservePath);
     await page.waitForSelector('.ack-check', { timeout: 15000 });
-    for (const c of await page.$$('.ack-check')) await c.check();
+    await fillContact(page); for (const c of await page.$$('.ack-check')) await c.check();
     await page.click('#continueBtn');
     await page.waitForURL(/stripe\.com/);
   }
@@ -73,12 +73,12 @@ const STANDINS = {
   ok((await conversions(page)).length === 0 && !(await pending(page)), 'homepage visit: no conversion, nothing pending');
   await page.goto(BASE + '/reserve?class=TESTccl');
   await page.waitForSelector('.ack-check');
-  for (const c of await page.$$('.ack-check')) await c.check();
+  await fillContact(page); for (const c of await page.$$('.ack-check')) await c.check();
   ok((await conversions(page)).length === 0 && !(await pending(page)), 'Reserve page + all acknowledgments checked: no conversion, nothing pending yet');
   ok((await confirmed(page, '')).length === 0, 'direct /confirmed visit: no conversion');
   ok((await confirmed(page, '?session_id=' + sid())).length === 0, '/confirmed?session_id=… without a trusted pending purchase: no conversion');
   await page.goto(BASE + '/reserve?class=TESTccl'); await page.waitForSelector('.ack-check');
-  for (const c of await page.$$('.ack-check')) await c.check();
+  await fillContact(page); for (const c of await page.$$('.ack-check')) await c.check();
   await page.click('#continueBtn'); await page.waitForURL(/stripe\.com/);
   ok((await conversions(page)).length === 0, 'opening Stripe checkout: no conversion');
   ok(JSON.parse(await pending(page)).value === 200, '…but the trusted amount is now pending ($200, not the record\'s legacy $175)');
