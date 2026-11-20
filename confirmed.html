@@ -177,17 +177,17 @@
     <a href="/terms">Terms</a> · <a href="/">Home</a>
   </footer>
 
-  <script src="booking.js?v=20261119"></script>
+  <script src="booking.js?v=20261119b"></script>
   <script>
     // Google Ads "KAT CCI Paid Class Registration" conversion. Fires only after a real Stripe
     // checkout: Stripe returns with ?session_id={CHECKOUT_SESSION_ID}, and /reserve stored the
     // trusted amount just before sending the customer to Stripe. Promotions must be their fixed
-    // promos.js price ($160 CCL promo); regular classes must equal the class's current online-bookable price (website
+    // promos.js price (none active now); regular classes must equal the class's current online-bookable price (website
     // price = confirmed Stripe amount, from settings/publicPricing). The session id is the
     // transaction_id; each session id is reported at most once from this browser.
     (function () {
       var PENDING = 'katcci_pending_purchase', SENT = 'katcci_conversions_sent';
-      var PROMO_VALUES = [160];
+      var PROMO_VALUES = [];   // fixed prices of active promos.js promotions (none now)
       var REGULAR_KEYS = ['ccl16', 'renewal3'];
       var MAX_AGE = 6 * 60 * 60 * 1000;   // a pending purchase older than 6 hours is ignored
       var sessionId = new URLSearchParams(window.location.search).get('session_id') || '';

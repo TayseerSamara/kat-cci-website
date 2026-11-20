@@ -89,6 +89,7 @@ const STANDINS = {
   ok(cards.every(c => !/price|to=|stripe/i.test(c.link)), 'card links carry no price or Stripe destination');
   const privText = await page.$eval('#ucPrivate', e => e.innerText.replace(/\s+/g, ' '));
   ok(/From \$250/.test(privText) && !(await page.$('#ucPrivate a.btn-reserve')), 'Private card stays contact-to-reserve, "From $250"');
+  ok(!/Women/i.test(privText), 'Private card: no women-only class bullet');
 
   // First real CCL card (if any) → reserve → $200 checkout
   const realCcl = cards.find(c => c.tag === 'CCL Certification');

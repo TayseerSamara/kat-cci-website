@@ -8,7 +8,7 @@ const { stubGoogle } = require('./google-stub');
 const BASE = process.env.SITE || 'http://localhost:5058';
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const SEND_TO = 'AW-18439430263/A1y-CLvYk5UdEPfAzdhE';
-const NOW = '2026-10-07T12:00:00-05:00';   // the (now only) CCL promotion still active
+const NOW = '2026-10-07T12:00:00-05:00';   // inside the old CCL promotion window (promotion now removed)
 const REG = { ccl: 'https://buy.stripe.com/4gM7sLaQ0cjt0Wg9ppak007', renewal: 'https://buy.stripe.com/bJeeVde2c1EP5cw9ppak009', private: 'https://buy.stripe.com/aFa9AT8HS97hcEYattak008', test: 'https://buy.stripe.com/6oUbJ18HS4R1gVe7hhak004' };
 // Old links replaced on 2026-11-19 (still active in Stripe until retired) — no longer approved here.
 const OLD = { ccl: 'https://buy.stripe.com/14A5kDf6g3MXdJ28llak000', renewal: 'https://buy.stripe.com/6oU7sLgakcjt34ocBBak002', womens: 'https://buy.stripe.com/eVqdR92ju6Z934odFFak001', private: 'https://buy.stripe.com/eVq3cve2c97hcEY7hhak003' };
@@ -97,7 +97,6 @@ const STANDINS = {
   const CASES = [
     ['Regular 16-Hour CCL', '/reserve?class=TESTccl', 200],
     ['Regular Renewal', '/reserve?class=TESTrenewal', 140],
-    ['Promotional CCL', '/reserve?promo=ccl-2026-10-17&utm_source=google&gclid=Cj0-conv', 160],
     ['Staff-texted CCL link (approved $200 Stripe link)', '/reserve?c=ccl16&to=' + encodeURIComponent(REG.ccl), 200],
     ['Staff-texted Renewal link (approved $140 Stripe link)', '/reserve?c=renewal3&to=' + encodeURIComponent(REG.renewal), 140]
   ];
@@ -141,6 +140,12 @@ const STANDINS = {
   await page.goto(BASE + '/reserve?promo=womens-2026-10-24');
   await page.waitForSelector('#errorFlow', { state: 'visible', timeout: 15000 });
   ok(/no longer available/.test(await page.textContent('#errorFlow')), "old Women's promo link: offer no longer available");
+  await page.goto(BASE + '/reserve?promo=ccl-2026-10-17&gclid=Cj0-conv');
+  await page.waitForSelector('#errorFlow', { state: 'visible', timeout: 15000 });
+  ok(/no longer available/.test(await page.textContent('#errorFlow')) && !(await page.isVisible('#ackFlow')), 'expired CCL promo link: offer no longer available, no checkout');
+  await page.goto(BASE + '/terms');
+  await page.evaluate(() => localStorage.setItem('katcci_pending_purchase', JSON.stringify({ value: 160, currency: 'USD', kind: 'promo:ccl-2026-10-17', at: Date.now() })));
+  ok((await confirmed(page, '?session_id=' + sid())).length === 0, 'pending CCL promo $160: no conversion (no promotion is active)');
   await page.goto(BASE + '/terms');
   await page.evaluate(() => localStorage.setItem('katcci_pending_purchase', JSON.stringify({ value: 125, currency: 'USD', kind: 'class:womens', at: Date.now() })));
   ok((await confirmed(page, '?session_id=' + sid())).length === 0, "pending Women's $125 (class:womens): no conversion");
@@ -156,7 +161,6 @@ const STANDINS = {
     ['Scheduled CCL class whose record says $215', '/reserve?class=TESTccl215', 215],
     ['Scheduled Renewal class (record $125)', '/reserve?class=TESTrenewal', 150],
     ['Staff-texted CCL link', '/reserve?c=ccl16&to=' + encodeURIComponent(REG.ccl), 215],
-    ['Promotional CCL (fixed promo price unchanged)', '/reserve?promo=ccl-2026-10-17', 160],
     ['Staff-texted Renewal link', '/reserve?c=renewal3&to=' + encodeURIComponent(REG.renewal), 150]]) {
     ({ ctx, page, errors } = await fresh());
     await checkout(page, path);

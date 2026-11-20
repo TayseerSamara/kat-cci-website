@@ -263,8 +263,8 @@ const ok = (c, l) => { console.log((c ? '  ✔ ' : '  ✘ ') + l); if (!c) fails
   await stubGoogle(ctx);
   page = await ctx.newPage();
   const promos = await (await page.request.get(SITE + '/promos.js')).text();
-  ok(/price: 160,/.test(promos) && promos.includes('bJe28rcY86Z9cEYeJJak005'), 'CCL promotion ($160) and its Stripe link unchanged');
-  ok(!/price: 100,/.test(promos) && !promos.includes('4gM5kD6zK4R15cwbxxak006') && !/womens/i.test(promos), "Women's promotion and its Stripe link removed");
+  ok(/var PROMOS = \[\];/.test(promos) && !/https:\/\/buy\.stripe\.com\//.test(promos) && !promos.includes('bJe28rcY86Z9cEYeJJak005') && !promos.includes('4gM5kD6zK4R15cwbxxak006'),
+     "no active promotion: expired CCL and Women's promotions and their Stripe links removed");
   await ctx.addInitScript(() => { try { sessionStorage.setItem('katcci_promo_seen', '1'); } catch (e) {} });
   await ctx.route(/Firestore\/Write|formspree\.io/, r => r.abort());
   page = await ctx.newPage();

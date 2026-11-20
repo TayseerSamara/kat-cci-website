@@ -10,23 +10,10 @@
 //   • today (Chicago time) is on or before `showUntil`.
 // Leave checkoutUrl empty to keep a promo switched off.
 (function () {
-  var PROMOS = [
-    {
-      id: 'ccl-2026-10-17',
-      classKey: 'ccl16',                    // matches /reserve acknowledgments
-      title: '16-Hour CCL Certification',
-      dates: 'Sat, Oct 17 & Sun, Oct 18',
-      time: '10:00 AM',
-      showUntil: '2026-10-16',              // last day to book (day before class)
-      regular: 175,
-      price: 160,                           // save $15 (about 8.6%), so no percentage shown
-      badge: 'SPECIAL PROMO',
-      showPercent: false,
-      fineprint: '+ $150 state fee',
-      checkoutUrl: 'https://buy.stripe.com/bJe28rcY86Z9cEYeJJak005'   // $160.00 (verified)
-    }
-    // The Women's Class promotion was removed on 2026-11-19 (Women's Class is no longer offered).
-  ];
+  // No promotion is currently active. The expired CCL promotion (ended Oct 16) and the Women's
+  // promotion were removed on 2026-11-19; their Stripe products and Payment Links are kept in Stripe. A new promo goes here, and its fixed price must also be added to
+  // PROMO_VALUES in reserve.html and confirmed.html for the Google Ads conversion.
+  var PROMOS = [];
 
   // Campaign wording used by the homepage popup and its reopen button.
   var CAMPAIGN = {

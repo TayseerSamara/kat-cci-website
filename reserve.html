@@ -269,8 +269,8 @@
     <a href="/terms">Terms</a> · <a href="/">Home</a>
   </footer>
 
-  <script src="promos.js?v=20261119"></script>
-  <script src="booking.js?v=20261119"></script>
+  <script src="promos.js?v=20261119b"></script>
+  <script src="booking.js?v=20261119b"></script>
   <script>
     (function () {
       var params = new URLSearchParams(window.location.search);
@@ -456,10 +456,10 @@
         });
 
         // Pending purchase for the Google Ads conversion on /confirmed. The amount never comes from
-        // the URL: promotions use their fixed promos.js price ($160 CCL promo); regular classes use the
+        // the URL: promotions use their fixed promos.js price (none active now); regular classes use the
         // current online-bookable price from settings/publicPricing (website price = confirmed Stripe
         // amount). Staff-texted links count only when their Stripe link is the approved regular link.
-        var PROMO_VALUES = [160];
+        var PROMO_VALUES = [];   // fixed prices of active promos.js promotions (none now)
         function rememberPendingPurchase() {
           var value = null, kind = '';
           var B = window.KAT_BOOKING;
